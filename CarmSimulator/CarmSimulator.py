@@ -3,6 +3,7 @@ import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
+import copy
 
 #
 # Carm Simulator
@@ -57,6 +58,15 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
     self.toggleDRRButton.connect('toggled(bool)', self.onToggleDRRButtonClicked)
     parametersFormLayout.addRow("Toggle DRR", self.toggleDRRButton)
     
+	# Field of View Slider
+    self.fieldOfViewSlider = ctk.ctkSliderWidget()
+    self.fieldOfViewSlider.singleStep = 0.1
+    self.fieldOfViewSlider.minimum = 0
+    self.fieldOfViewSlider.maximum = 100
+    self.fieldOfViewSlider.setToolTip("Increase/Decrease Field of View.")
+    self.fieldOfViewSlider.connect('valueChanged(double)', self.onFieldOfViewValueChanged)
+    parametersFormLayout.addRow("Field of View", self.fieldOfViewSlider)
+	
     # C Rotation
     self.xRotationSliderWidget = ctk.ctkSliderWidget()
     self.xRotationSliderWidget.singleStep = 0.1
@@ -103,6 +113,8 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
     self.logic.ToggleDRR(value)
   def onNeedleValuesChanged(self, value):
     self.logic.UpdateNeedle(value)
+  def onFieldOfViewValueChanged(self, value):
+    self.logic.ChangeFOV(value)
   
   def cleanup(self):
     pass
@@ -124,13 +136,34 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     # Set up dummy render window
     self.renderer = vtk.vtkRenderer()
     self.renderWindow = vtk.vtkRenderWindow()
+    self.rendererFOV = vtk.vtkRenderer()
     self.renderWindow.AddRenderer(self.renderer)
-    tran = vtk.vtkTransform()
-    tran.Identity()
-    tran.Translate(-67.799774*2, -67.799774*2, -109.199636*2)
-    self.volume.SetUserTransform(tran)
+    self.renderWindow.SetNumberOfLayers(2)
+    self.renderWindow.AddRenderer(self.renderer)
+    self.renderWindow.AddRenderer(self.rendererFOV)
+    self.renderer.SetLayer(0)
+    self.rendererFOV.SetLayer(1)
     self.renderer.AddVolume(self.volume)
+    self.renderWindow.SetSize(530,335)
     #self.renderWindow.SetOffScreenRendering(1)
+    self.imageFOV = vtk.vtkImageSlice()
+    self.imageMapper = vtk.vtkImageSliceMapper()
+    self.fieldOfViewSize = 50
+    self.pngReader = vtk.vtkPNGReader()
+    #self.pngReader.SetFileName("Resources\\FieldOfViewSmallTest.png")
+    self.pngReader.SetFileName("C:/users/dallen/Documents/C-arm Simulator/DRR/FieldOfView2.png")
+    self.pngReader.Update()
+    self.imageMapper.SetInputConnection(self.pngReader.GetOutputPort())
+    self.imageMapper.Update()
+    self.imageFOV.SetMapper(self.imageMapper)
+    self.rendererFOV.AddViewProp(self.imageFOV)
+    self.imageFOV.ForceTranslucentOn()
+    #self.rendererFOV.GetActiveCamera().SetPosition(3750,3750,20000)
+    #self.rendererFOV.GetActiveCamera().SetFocalPoint(3750,3750,0)
+    self.rendererFOV.ResetCamera()
+    self.imageFOV.SetPosition(0,0,1000)
+    print self.rendererFOV.GetActiveCamera().GetPosition()
+    print self.rendererFOV.GetActiveCamera().GetFocalPoint()
 	
 	# Add Needle
     self.needle = vtk.vtkCylinderSource()
@@ -157,7 +190,19 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
   def UpdateNeedle(self, value):
     self.needleActor.SetPosition(value, 0, 0)
     if self.toggleDRR == True:
-      self.UpdateDRR()
+      #self.UpdateDRR()
+      self.UpdateCRotation(self.zRotationValue)
+	  
+  def ChangeFOV(self, value):
+    #self.fieldOfViewSize = value
+    pos1 = self.rendererFOV.GetActiveCamera().GetPosition()
+    foc1 = self.rendererFOV.GetActiveCamera().GetFocalPoint()
+    print pos1
+    print value
+    self.rendererFOV.GetActiveCamera().SetPosition(pos1[0], pos1[1], pos1[2] - value)
+    self.rendererFOV.GetActiveCamera().SetFocalPoint(foc1[0], foc1[1], foc1[2])
+    #self.rendererFOV.GetActiveCamera().SetFocalPoint(-3750,-3750,0)
+    self.UpdateCRotation(self.zRotationValue)
 
   def ToggleDRR(self, value):
   
@@ -190,7 +235,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     # Render DRR
     self.cameraTransform.Identity()
     self.cameraTransform.PostMultiply()
-    self.cameraTransform.Translate(0,-450,0)
+    self.cameraTransform.Translate(0,-250,0)
     self.cameraTransform.RotateX(self.xRotationValue)  
     self.cameraTransform.RotateY(0.0)
     self.cameraTransform.RotateZ(-self.zRotationValue)
@@ -213,18 +258,23 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
 	# Add DRR Image to Scene
     tran = vtk.vtkTransform()
     tran.Identity()
-    tran.Translate(2125.160,605.795,-340.272)
+    #tran.Translate(2125.160,605.795,-340.272)
+    tran.Translate(2000.150,590.795,-340.272)
     self.image.SetUserTransform(tran)
     self.slicerRenderer.AddViewProp(self.image)
     self.renderWindow.Render()
     self.slicerRenderer.Render()
+    #iren = vtk.vtkRenderWindowInteractor()
+    #self.renderWindow.SetInteractor(iren)
+    #iren.Initialize()
+    #iren.Start()
     
     
   def UpdateDRR(self):
 	# Position Dummy Renderer Camera
     self.cameraTransform.Identity()
     self.cameraTransform.PostMultiply()
-    self.cameraTransform.Translate(0,-450,0)
+    self.cameraTransform.Translate(0,-250,0)
     self.cameraTransform.RotateX(self.xRotationValue)  
     self.cameraTransform.RotateY(0.0)
     self.cameraTransform.RotateZ(-self.zRotationValue)
