@@ -190,7 +190,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     # Render DRR
     self.cameraTransform.Identity()
     self.cameraTransform.PostMultiply()
-    self.cameraTransform.Translate(0,-400,0)
+    self.cameraTransform.Translate(0,-450,0)
     self.cameraTransform.RotateX(self.xRotationValue)  
     self.cameraTransform.RotateY(0.0)
     self.cameraTransform.RotateZ(-self.zRotationValue)
@@ -224,7 +224,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
 	# Position Dummy Renderer Camera
     self.cameraTransform.Identity()
     self.cameraTransform.PostMultiply()
-    self.cameraTransform.Translate(0,-400,0)
+    self.cameraTransform.Translate(0,-450,0)
     self.cameraTransform.RotateX(self.xRotationValue)  
     self.cameraTransform.RotateY(0.0)
     self.cameraTransform.RotateZ(-self.zRotationValue)
