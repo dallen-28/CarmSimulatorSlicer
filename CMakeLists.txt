@@ -7,7 +7,11 @@ project(CarmSimulator)
 set(EXTENSION_HOMEPAGE "http://slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/CarmSimulator")
 set(EXTENSION_CATEGORY "Examples")
 set(EXTENSION_CONTRIBUTORS "Daniel Allen (Western University)")
+<<<<<<< HEAD
 set(EXTENSION_DESCRIPTION "A VR Carm Simulator")
+=======
+set(EXTENSION_DESCRIPTION "CarmSimulator in VR")
+>>>>>>> 45a96d8eaa7bf8780f27f835789ed00405b29cb9
 set(EXTENSION_ICONURL "http://www.example.com/Slicer/Extensions/CarmSimulator.png")
 set(EXTENSION_SCREENSHOTURLS "http://www.example.com/Slicer/Extensions/CarmSimulator/Screenshots/1.png")
 set(EXTENSION_DEPENDS "NA") # Specified as a space separated string, a list or 'NA' if any
