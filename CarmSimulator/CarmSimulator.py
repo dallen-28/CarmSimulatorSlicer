@@ -56,6 +56,12 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         # Layout within the dummy collapsible button
         parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
 
+        # Generate Scene Button
+        self.generateSceneButton = qt.QPushButton('Generate Scene')
+        self.generateSceneButton.connect('checked(bool)', self.onGenerateSceneButtonClicked)
+        self.generateSceneButton.setDisabled(True)
+        parametersFormLayout.addRow(self.generateSceneButton)
+
         # Toggle DRR Button
         self.toggleDRRButton = qt.QCheckBox()
         self.toggleDRRButton.connect('toggled(bool)', self.onToggleDRRButtonClicked)
@@ -129,6 +135,9 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
     def onToggleDRRButtonClicked(self, value):
         self.logic.ToggleDRR(value)
 
+    def onGenerateSceneButtonClicked(self, value):
+        self.logic.GenerateScene(value)
+
     def onNeedleValuesChanged(self, value):
         self.logic.UpdateNeedle(value)
 
@@ -162,8 +171,12 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.rendererFOV = vtk.vtkRenderer()
         self.pngReader = vtk.vtkPNGReader()
         self.imageViewer = vtk.vtkImageViewer2()
-        # self.pngReader.SetFileName("Resources\\FieldOfViewBigTest.png")
-        self.pngReader.SetFileName("C:/users/dallen/Documents/C-arm Simulator/DRR/FieldOfViewMedium.png")
+
+
+        self.fovPath1 = os.path.dirname(os.path.abspath(__file__))
+        self.fovPath = os.path.join(self.fovPath1, 'Resources\FieldOfViewMedium.png')
+        self.DRRToMonitorTransformNode = slicer.mrmlScene.GetNodesByName("DRRToMonitor").GetItemAsObject(0)
+        self.pngReader.SetFileName(self.fovPath)
         self.pngReader.Update()
         self.imageViewer.SetInputConnection(self.pngReader.GetOutputPort())
         self.imageViewer.SetRenderer(self.rendererFOV)
@@ -203,6 +216,10 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.zoomFactor = 0.0
         self.DRRInitialized = False
         self.toggleDRR = False
+
+    def GenerateScene(self, value):
+        a = 1
+
 
     def UpdateNeedle(self, value):
         self.needleActor.SetPosition(value, 0, 0)
@@ -277,40 +294,21 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.texture = vtk.vtkTexture()
         self.texture.SetInputConnection(self.winToImage.GetOutputPort())
         self.texture.Update()
-        self.plane.SetPoint1(0, 374, 0)
-        self.plane.SetPoint2(589, 0, 0)
+        self.plane.SetPoint1(0, 530, 0)
+        self.plane.SetPoint2(335, 0, 0)
         self.plane.SetOrigin(0, 0, 0)
         self.plane.Update()
 
-        # Example Texture Mapping Render
-        iren = vtk.vtkRenderWindowInteractor()
-        ren2 = vtk.vtkRenderer()
-        map1 = vtk.vtkPolyDataMapper()
-        cube1 = vtk.vtkCubeSource()
-        map1.SetInputConnection(self.plane.GetOutputPort())
-        actor = vtk.vtkActor()
-        actor.SetMapper(map1)
-        actor.SetTexture(self.texture)
-        renWin2 = vtk.vtkRenderWindow()
-        renWin2.AddRenderer(ren2)
-        ren2.ResetCamera()
-        ren2.AddActor(actor)
-        # renWin2.Render()
-        renWin2.SetInteractor(iren)
-        # iren.Initialize()
-        # iren.Start()
-
-        # self.mapToPlane = vtk.vtkTextureMapToPlane()
-        # self.mapToPlane.SetInputConnection(self.plane.GetOutputPort())
-        # self.mapToPlane.Update()
-
-        # TO DO
-        # Add winToImage Texture as MRML Node
-
+        # Create DRR Model Node
         self.planeModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
         self.planeModelNode.CreateDefaultDisplayNodes()
         self.planeModelNode.CreateDefaultStorageNode()
         self.planeModelNode.SetAndObservePolyData(self.plane.GetOutput())
+        if self.DRRToMonitorTransformNode is None:
+            print "Load Scene before generating DRR"
+            return
+
+        self.planeModelNode.SetAndObserveTransformNodeID(self.DRRToMonitorTransformNode.GetID())
         self.planeModelDisplay = self.planeModelNode.GetDisplayNode()
         self.planeModelDisplay.SetTextureImageDataConnection(self.winToImage.GetOutputPort())
         self.planeModelDisplay.VisibilityOn()
@@ -318,18 +316,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.planeModelDisplay.SetFrontfaceCulling(False)
         self.planeModelDisplay.SetBackfaceCulling(False)
 
-        tran = vtk.vtkTransform()
-        tran.Identity()
-        # tran.Translate(2125.160,605.795,-340.272)
-        tran.Translate(2000.150, 590.795, -340.272)
-        # self.image.SetUserTransform(tran)
-        # self.slicerRenderer.AddViewProp(self.image)
         self.renderWindow.Render()
         self.slicerRenderer.Render()
-        # iren = vtk.vtkRenderWindowInteractor()
-        # self.renderWindow.SetInteractor(iren)
-        # iren.Initialize()
-        # iren.Start()
 
     def UpdateDRR(self):
         # Position Dummy Renderer Camera
