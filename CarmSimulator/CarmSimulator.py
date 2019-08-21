@@ -238,6 +238,14 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.tableModel.GetDisplayNode().SetColor(0.5,0.5,0.5)
         self.supportModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\Support.stl'))
         self.supportModel.GetDisplayNode().SetColor(0.96,0.96,0.96)
+        self.lumbarSpineVolume = slicer.util.loadVolume(os.path.join(self.resourcePath, 'Resources\LumbarSpinePhantom_CT.mha'))
+
+        # Load volume and apply transfer function
+        self.volumeRenderingLogic = slicer.modules.volumerendering.logic()
+        slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
+        asd1 = self.volumeRenderingLogic.AddVolumePropertyFromFile(os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
+        self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(asd1.GetID())
+        self.lumbarSpineVolume.SetDisplayVisibility(1)
 
         # Load in transforms and apply to models
         self.cRotation = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\CTransform.h5'))
@@ -247,19 +255,21 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.fluoroDisplayTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\FluoroDisplayTransform.h5'))
         #self.gantryTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\GantryTransform.h5'))
         #self.needleTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\NeedleTransform.h5'))
-        self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\SceneTransform.h5'))
+        self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\SceneTransform2.h5'))
         self.tableTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\TableTransform.h5'))
         self.spineModelTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\SpinePlateTransform.h5'))
 
         # Attach Models to transforms
+        #self.lumbarSpineVolume.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.cRotation.SetAndObserveTransformNodeID(self.gantryRotation.GetID())
         self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.spineModelTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.fluoroDisplayTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.gantryRotation.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.floorTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.supportModel.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.dRRToMonitorTransform.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
 
-        self.supportModel.SetAndObserveTransformNodeID(self.supportModel.GetID())
         self.cModel.SetAndObserveTransformNodeID(self.cRotation.GetID())
         self.gantryModel.SetAndObserveTransformNodeID(self.gantryRotation.GetID())
         self.floorModel.SetAndObserveTransformNodeID(self.floorTransform.GetID())
@@ -268,20 +278,15 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.tableModel.SetAndObserveTransformNodeID(self.tableTransform.GetID())
 
         # Load volume and set transfer function
-        self.lumbarSpineVolume = slicer.util.loadVolume(os.path.join(self.resourcePath, 'Resources\LumbarSpinePhantom_CT.mha'))
-        self.logic = slicer.modules.volumerendering.logic()
-        slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
-        asd1 = self.logic.AddVolumePropertyFromFile(os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
-        self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(asd1.GetID())
+
+
         #logic.UpdateDisplayNodeFromVolumeNode(self.lumbarSpineVolume.GetDisplayNode(), self.lumbarSpineVolume)
 
         #self.lumbarSpineVolume.SetAndObserveTransformNodeID(self.tableTransform.GetID())
 
 
-        self.lumbarSpineVolume.SetDisplayVisibility(1)
 
         self.Initialize()
-
         self.slicerRenderer.ResetCamera()
         self.slicerRenderer.Render()
 
