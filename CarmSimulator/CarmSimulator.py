@@ -47,6 +47,22 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         slicer.mymod = self
 
 
+    @vtk.calldata_type(vtk.VTK_INT)
+    def updateTransforms(self, caller, event, calldata):
+        if calldata == 1:
+            self.xRotationSliderWidget.value += 1
+            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
+        elif calldata == 2:
+            self.xRotationSliderWidget.value -= 1
+            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
+        elif calldata == 3:
+            self.zRotationSliderWidget.value += 1
+            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+        elif calldata == 4:
+            self.zRotationSliderWidget.value -= 1
+            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+
+
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
 
@@ -115,6 +131,16 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.zRotationSliderWidget.connect('valueChanged(double)', self.onGantryRotationValuesChanged)
         parametersFormLayout.addRow("Gantry Rotation", self.zRotationSliderWidget)
 
+        # Wag Rotation
+        self.wagRotationSliderWidget = ctk.ctkSliderWidget()
+        self.wagRotationSliderWidget.singleStep = 0.1
+        self.wagRotationSliderWidget.minimum = -40
+        self.wagRotationSliderWidget.maximum = 40
+        self.wagRotationSliderWidget.value = 0.0
+        self.wagRotationSliderWidget.setToolTip("Wag Rotation about the Y axis.")
+        self.wagRotationSliderWidget.connect('valueChanged(double)', self.onWagRotationValuesChanged)
+        parametersFormLayout.addRow("Wag Rotation", self.wagRotationSliderWidget)
+
         # Needle Slider
         self.needleSliderWidget = ctk.ctkSliderWidget()
         self.needleSliderWidget.singleStep = 0.1
@@ -128,8 +154,19 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         # Create Logic Instance
         self.logic = CarmSimulatorLogic()
 
+        # Grab gesturerecognition logic instance so we can observe for events
+        self.gestureObserver = slicer.modules.gesturerecognition.logic()
+        self.useGestureRecognition = True
+        self.gestureObserverNum = 0
+        if self.gestureObserver is None:
+            self.useGestureRecognition = False
+
+
+
         # Add vertical Spacer
         self.layout.addStretch(1)
+
+
 
     def onCRotationValuesChanged(self, value):
         self.logic.UpdateCRotation(value)
@@ -137,10 +174,17 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
     def onGantryRotationValuesChanged(self, value):
         self.logic.UpdateGantryRotation(value)
 
+    def onWagRotationValuesChanged(self, value):
+        self.logic.UpdateWagRotation(value)
+
     def onToggleDRRButtonClicked(self, value):
         self.logic.ToggleDRR(value)
 
     def onGenerateSceneButtonClicked(self, value):
+        if self.useGestureRecognition == True:
+            if self.gestureObserverNum != 0:
+                self.gestureObserver.RemoveObserver(self.gestureObserverNum)
+            self.gestureObserverNum = self.gestureObserver.AddObserver(self.gestureObserver.GestureRecognizedEvent, self.updateTransforms)
         self.logic.GenerateScene(value)
 
     def onNeedleValuesChanged(self, value):
@@ -153,6 +197,11 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.ChangeZoomFactor(value)
 
     def cleanup(self):
+        if self.gestureObserverNum != 0:
+            self.gestureObserver.RemoveObserver(self.gestureObserverNum)
+
+        # Cleanup any memory leaks
+
         pass
 
 
@@ -167,7 +216,6 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.resourcePath = os.path.dirname(os.path.abspath(__file__))
         self.slicerRenderer = slicer.app.layoutManager().threeDWidget(0).threeDView().renderWindow().GetRenderers().GetFirstRenderer()
         slicer.mymod = self
-        #self.Initialize()
 
     def Initialize(self):
 
@@ -200,90 +248,135 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.renderWindow.SetOffScreenRendering(1)
 
         # Add Needle
-        self.needle = vtk.vtkCylinderSource()
-        self.needle.SetRadius(0.5)
-        self.needle.SetHeight(100)
-        self.needleMapper = vtk.vtkPolyDataMapper()
-        self.needleMapper.SetInputConnection(self.needle.GetOutputPort())
-        self.needleMapper.Update()
-        self.needleActor = vtk.vtkActor()
-        self.needleActor.SetMapper(self.needleMapper)
-        self.needleActor.GetProperty().SetColor(0.3, 0.3, 0.3)
-        self.renderer.AddActor(self.needleActor)
+        #self.needle = vtk.vtkCylinderSource()
+        #self.needle.SetRadius(0.5)
+        #self.needle.SetHeight(100)
+        #self.needleMapper = vtk.vtkPolyDataMapper()
+        #self.needleMapper.SetInputConnection(self.needle.GetOutputPort())
+        #self.needleMapper.Update()
+        #self.needleActor = vtk.vtkActor()
+        #self.needleActor.SetMapper(self.needleMapper)
+        #self.needleActor.GetProperty().SetColor(0.3, 0.3, 0.3)
+        #self.renderer.AddActor(self.needleActor)
 
         # Initialize Carm Transforms
         self.cRotation = vtk.vtkTransform()
         self.gantryRotation = vtk.vtkTransform()
-        self.cTransformNode = slicer.mrmlScene.GetNodesByName("CTransform").GetItemAsObject(0)
-        self.gantryTransformNode = slicer.mrmlScene.GetNodesByName("gantryTransform").GetItemAsObject(0)
+        self.wagRotation = vtk.vtkTransform()
+        self.focalPointTransform = vtk.vtkTransform()
         self.xRotationValue = 0.0
         self.zRotationValue = 0.0
+        self.yRotationValue = 0.0
         self.zoomFactor = 0.0
         self.DRRInitialized = False
         self.toggleDRR = False
 
     def GenerateScene(self, value):
-        # Load in models from resources folder
-        self.cModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\C.stl'))
-        self.cModel.GetDisplayNode().SetColor(0.91,0.91,0.91)
-        self.floorModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\Floor.stl'))
-        self.floorModel.GetDisplayNode().SetColor(1,1,1)
-        self.fluoroDisplayModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\FluoroDisplayV2.stl'))
-        self.fluoroDisplayModel.GetDisplayNode().SetColor(0.5,0.5,0.5)
-        self.gantryModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\GantryV3.stl'))
-        self.gantryModel.GetDisplayNode().SetColor(0.79,0.79,0.79)
-        self.spinePlateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\SpinePlate.stl'))
-        self.spinePlateModel.GetDisplayNode().SetColor(1,0,0)
-        self.tableModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\Stanless steel table.stl'))
-        self.tableModel.GetDisplayNode().SetColor(0.5,0.5,0.5)
-        self.supportModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources\Support.stl'))
-        self.supportModel.GetDisplayNode().SetColor(0.96,0.96,0.96)
-        self.lumbarSpineVolume = slicer.util.loadVolume(os.path.join(self.resourcePath, 'Resources\LumbarSpinePhantom_CT.mha'))
+        # Load in models from resources folder if they are not in the scene already
 
-        # Load volume and apply transfer function
-        self.volumeRenderingLogic = slicer.modules.volumerendering.logic()
-        slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
-        asd1 = self.volumeRenderingLogic.AddVolumePropertyFromFile(os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
-        self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(asd1.GetID())
-        self.lumbarSpineVolume.SetDisplayVisibility(1)
+        self.cModel = slicer.mrmlScene.GetNodesByName("C").GetItemAsObject(0)
+        if self.cModel is None:
+            self.cModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/C.stl'))
+            self.cModel.GetDisplayNode().SetColor(0.91, 0.91, 0.91)
 
-        # Load in transforms and apply to models
-        self.cRotation = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\CTransform.h5'))
-        self.gantryRotation = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\gantryTransform.h5'))
-        self.dRRToMonitorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\DRRToMonitor.h5'))
-        self.floorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\FloorTransform.h5'))
-        self.fluoroDisplayTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\FluoroDisplayTransform.h5'))
-        #self.gantryTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\GantryTransform.h5'))
-        #self.needleTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\NeedleTransform.h5'))
-        self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\SceneTransform2.h5'))
-        self.tableTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\TableTransform.h5'))
-        self.spineModelTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources\SpinePlateTransform.h5'))
+        self.floorModel = slicer.mrmlScene.GetNodesByName("Floor").GetItemAsObject(0)
+        if self.floorModel is None:
+            self.floorModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Floor.stl'))
+            self.floorModel.GetDisplayNode().SetColor(1, 1, 1)
 
-        # Attach Models to transforms
-        #self.lumbarSpineVolume.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.cRotation.SetAndObserveTransformNodeID(self.gantryRotation.GetID())
+        self.fluoroDisplayModel = slicer.mrmlScene.GetNodesByName("FluoroDisplayV2").GetItemAsObject(0)
+        if self.fluoroDisplayModel is None:
+            self.fluoroDisplayModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/FluoroDisplayV2.stl'))
+            self.fluoroDisplayModel.GetDisplayNode().SetColor(0.5, 0.5, 0.5)
+
+        self.gantryModel = slicer.mrmlScene.GetNodesByName("GantryV3").GetItemAsObject(0)
+        if self.gantryModel is None:
+            self.gantryModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/GantryV3.stl'))
+            self.gantryModel.GetDisplayNode().SetColor(0.79, 0.79, 0.79)
+
+        self.spinePlateModel = slicer.mrmlScene.GetNodesByName("SpinePlate").GetItemAsObject(0)
+        if self.spinePlateModel is None:
+            self.spinePlateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/SpinePlate.stl'))
+            self.spinePlateModel.GetDisplayNode().SetColor(1, 0, 0)
+
+        self.tableModel = slicer.mrmlScene.GetNodesByName("Stanless steel table").GetItemAsObject(0)
+        if self.tableModel is None:
+            self.tableModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Stanless steel table.stl'))
+            self.tableModel.GetDisplayNode().SetColor(0.5, 0.5, 0.5)
+
+        self.supportModel = slicer.mrmlScene.GetNodesByName("Support").GetItemAsObject(0)
+        if self.supportModel is None:
+            self.supportModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Support.stl'))
+            self.supportModel.GetDisplayNode().SetColor(0.96, 0.96, 0.96)
+
+
+        # Load in transforms if they are not already in the scene
+        self.cTransform = slicer.mrmlScene.GetNodesByName("CTransform").GetItemAsObject(0)
+        if self.cTransform is None:
+            self.cTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/CTransform.h5'))
+
+        self.gantryTransform = slicer.mrmlScene.GetNodesByName("GantryTransform").GetItemAsObject(0)
+        if self.gantryTransform is None:
+            self.gantryTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/GantryTransform.h5'))
+
+        self.dRRToMonitorTransform = slicer.mrmlScene.GetNodesByName("DRRToMonitor").GetItemAsObject(0)
+        if self.dRRToMonitorTransform is None:
+            self.dRRToMonitorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/DRRToMonitor.h5'))
+
+        self.floorTransform = slicer.mrmlScene.GetNodesByName("FloorTransform").GetItemAsObject(0)
+        if self.floorTransform is None:
+            self.floorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/FloorTransform.h5'))
+
+        self.fluoroDisplayTransform = slicer.mrmlScene.GetNodesByName("FluoroDisplayTransform").GetItemAsObject(0)
+        if self.fluoroDisplayTransform is None:
+            self.fluoroDisplayTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/FluoroDisplayTransform.h5'))
+
+        self.sceneTransform = slicer.mrmlScene.GetNodesByName("SceneTransform").GetItemAsObject(0)
+        if self.sceneTransform is None:
+            self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SceneTransform.h5'))
+
+        self.tableTransform = slicer.mrmlScene.GetNodesByName("TableTransform").GetItemAsObject(0)
+        if self.tableTransform is None:
+            self.tableTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/TableTransform.h5'))
+
+        self.spinePlateTransform = slicer.mrmlScene.GetNodesByName("SpinePlateTransform").GetItemAsObject(0)
+        if self.spinePlateTransform is None:
+            self.spinePlateTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SpinePlateTransform.h5'))
+
+        self.wagTransform = slicer.mrmlScene.GetNodesByName("WagTransform").GetItemAsObject(0)
+        if self.wagTransform is None:
+            self.wagTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/WagTransform.h5'))
+
+
+        # Set up transform hierarchy
+        self.cTransform.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
         self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.spineModelTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.spinePlateTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.fluoroDisplayTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.gantryRotation.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.floorTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.supportModel.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.gantryTransform.SetAndObserveTransformNodeID(self.wagTransform.GetID())
         self.dRRToMonitorTransform.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
+        self.wagTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
 
-        self.cModel.SetAndObserveTransformNodeID(self.cRotation.GetID())
-        self.gantryModel.SetAndObserveTransformNodeID(self.gantryRotation.GetID())
+        self.supportModel.SetAndObserveTransformNodeID(self.wagTransform.GetID())
+        self.cModel.SetAndObserveTransformNodeID(self.cTransform.GetID())
         self.floorModel.SetAndObserveTransformNodeID(self.floorTransform.GetID())
         self.fluoroDisplayModel.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
-        self.spinePlateModel.SetAndObserveTransformNodeID(self.spineModelTransform.GetID())
+        self.gantryModel.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
+        self.spinePlateModel.SetAndObserveTransformNodeID(self.spinePlateTransform.GetID())
         self.tableModel.SetAndObserveTransformNodeID(self.tableTransform.GetID())
 
-        # Load volume and set transfer function
-
-
+        # Load volume and set transfer function if not in scene already
+        self.lumbarSpineVolume = slicer.mrmlScene.GetNodesByName("LumbarSpinePhantom_CT").GetItemAsObject(0)
+        if self.lumbarSpineVolume is None:
+            self.lumbarSpineVolume = slicer.util.loadVolume(os.path.join(self.resourcePath, 'Resources\LumbarSpinePhantom_CT.mha'))
+            self.logic = slicer.modules.volumerendering.logic()
+            slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
+            asd1 = self.logic.AddVolumePropertyFromFile(os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
+            self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(asd1.GetID())
+            self.lumbarSpineVolume.SetDisplayVisibility(1)
         #logic.UpdateDisplayNodeFromVolumeNode(self.lumbarSpineVolume.GetDisplayNode(), self.lumbarSpineVolume)
 
         #self.lumbarSpineVolume.SetAndObserveTransformNodeID(self.tableTransform.GetID())
-
 
 
         self.Initialize()
@@ -341,7 +434,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.imageMapper.SetInputData(self.winToImage.GetOutput())
         self.image.SetMapper(self.imageMapper)
 
-        # Render DRR
+        # Render DRR (replace with udpate DRR)
         self.cameraTransform.Identity()
         self.cameraTransform.PostMultiply()
         self.cameraTransform.Translate(0, -250, 0)
@@ -392,11 +485,29 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.cameraTransform.PostMultiply()
         self.cameraTransform.Translate(0, -250 + self.zoomFactor * 4, 0)
         self.cameraTransform.RotateX(self.xRotationValue)
-        self.cameraTransform.RotateY(0.0)
         self.cameraTransform.RotateZ(-self.zRotationValue)
+
+        self.cameraTransform.Translate(200, 0, 0)
+        #self.cameraTransform.Translate(-1262.2704, -337.5527, 5.7)
+        self.cameraTransform.RotateY(-self.yRotationValue)
+        self.cameraTransform.Translate(-200, 0, 0)
+        #self.cameraTransform.Translate(1262.2704, 337.5527, -5.7)
+
+
+        self.focalPointTransform.Identity()
+        self.focalPointTransform.Translate(200, 0, 0)
+        self.focalPointTransform.RotateY(self.yRotationValue)
+        self.focalPointTransform.Translate(-200, 0, 0)
+        zAxis = [0,0,0,0]
+        up = [0,0,1,0]
+        self.cameraTransform.MultiplyPoint(up, zAxis)
+
+
         self.renderer.GetActiveCamera().SetPosition(self.cameraTransform.GetPosition())
-        self.renderer.GetActiveCamera().SetFocalPoint(0, 0, 0)
-        self.renderer.GetActiveCamera().SetViewUp(0, 0, 1)
+        self.renderer.GetActiveCamera().SetFocalPoint(self.focalPointTransform.GetPosition())
+        self.renderer.GetActiveCamera().SetViewUp(zAxis[0], zAxis[1], zAxis[2])
+        #self.renderer.GetActiveCamera().SetViewUp(0,0,1)
+        #self.renderer.GetActiveCamera().SetFocalPoint(0,0,0)
 
         # Update WinToImage Filter and Render
         self.winToImage.Modified()
@@ -414,7 +525,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.cRotation.Translate(-1262.2704, -337.5527, 5.7)
         self.cRotation.RotateZ(value)
         self.cRotation.Translate(1262.2704, 337.5527, -5.7)
-        self.cTransformNode.SetMatrixTransformToParent(self.cRotation.GetMatrix())
+        self.cTransform.SetMatrixTransformToParent(self.cRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
@@ -424,10 +535,17 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.xRotationValue = value
         self.gantryRotation.Identity()
         self.gantryRotation.RotateX(value)
-        self.gantryTransformNode.SetMatrixTransformToParent(self.gantryRotation.GetMatrix())
+        self.gantryTransform.SetMatrixTransformToParent(self.gantryRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
+    def UpdateWagRotation(self, value):
+        self.yRotationValue = value
+        self.wagRotation.Identity()
+        self.wagRotation.RotateY(value)
+        self.wagTransform.SetMatrixTransformToParent(self.wagRotation.GetMatrix())
+        if self.toggleDRR == True:
+            self.UpdateDRR()
 
 
 
