@@ -62,6 +62,48 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
             self.zRotationSliderWidget.value -= 1
             self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
 
+    @vtk.calldata_type(vtk.VTK_OBJECT)
+    def interactorCallback(self, caller, event, calldata):
+        trackpadPositionX = matr.GetElement(0,0)
+        trackpadPositionY = matr.GetElement(0,1)
+        device = matr.GetElement(0,2)
+        input = matr.GetElement(0,3)
+        action = matr.GetElement(1,0)
+
+        # Set C-arm Movement Direction
+        if trackpadPositionX > 0:
+            if trackpadPositionY > 0:
+                self.direction = 1
+            else:
+                self.direction = 2
+        else:
+            if trackpadPositionY > 0:
+                self.direction  = 3
+            else:
+                self.direction = 4
+        # if right controller and trigger
+        if device == 1 and input == 2:
+            if action == 0:
+                self.movement = 1
+            else:
+                self.movement = 0
+
+    def processOneThing(self):
+        if self.movement:
+            if self.direction == 1:
+                self.xRotationSliderWidget.value += 1
+                self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
+            elif self.direction == 2:
+                self.xRotationSliderWidget.value -= 1
+                self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
+            elif self.direction == 3:
+                self.zRotationSliderWidget.value += 1
+                self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+            elif self.direction == 4:
+                self.zRotationSliderWidget.value -= 1
+                self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+            else:
+                print("Invalid C-arm Movement Direction")
 
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
@@ -154,12 +196,23 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         # Create Logic Instance
         self.logic = CarmSimulatorLogic()
 
+        #self.interactorObserver = slicer.modules.virtualReality
+
         # Grab gesturerecognition logic instance so we can observe for events
         self.gestureObserver = slicer.modules.gesturerecognition.logic()
         self.useGestureRecognition = True
         self.gestureObserverNum = 0
         if self.gestureObserver is None:
             self.useGestureRecognition = False
+
+        self.timer = qt.QTimer()
+        self.elapsed = qt.QElapsedTimer()
+        self.timerIteration = 0
+        self.timer.connect('timeout()', self.processOneThing)
+        self.movement = 1
+        self.direction = 0
+        #self.timer.setInterval(30)
+        self.timer.start()
 
 
 
@@ -178,6 +231,14 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.UpdateWagRotation(value)
 
     def onToggleDRRButtonClicked(self, value):
+        if self.movement == 1:
+            self.movement = 0
+        else:
+            self.movement = 1
+        if self.direction == 4:
+            self.direction = 0
+        self.direction += 1
+
         self.logic.ToggleDRR(value)
 
     def onGenerateSceneButtonClicked(self, value):
@@ -200,8 +261,9 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         if self.gestureObserverNum != 0:
             self.gestureObserver.RemoveObserver(self.gestureObserverNum)
 
+        print("HELLO")
         # Cleanup any memory leaks
-
+        self.logic.cleanup()
         pass
 
 
@@ -546,6 +608,10 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.wagTransform.SetMatrixTransformToParent(self.wagRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
+
+    def cleanup(self):
+        if self.planeModelNode is not None:
+            slicer.mrmlScene.RemoveNode(self.planeModelNode)
 
 
 
