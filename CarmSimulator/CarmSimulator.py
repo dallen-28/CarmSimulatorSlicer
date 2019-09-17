@@ -64,8 +64,16 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
     @vtk.calldata_type(vtk.VTK_OBJECT)
     def interactorCallback(self, caller, event, calldata):
+        matr = calldata
+        #print(matr)
         trackpadPositionX = matr.GetElement(0,0)
         trackpadPositionY = matr.GetElement(0,1)
+
+
+        if trackpadPositionX == 0:
+            self.direction = 0
+            return
+
         device = matr.GetElement(0,2)
         input = matr.GetElement(0,3)
         action = matr.GetElement(1,0)
@@ -82,28 +90,27 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
             else:
                 self.direction = 4
         # if right controller and trigger
-        if device == 1 and input == 2:
-            if action == 0:
-                self.movement = 1
-            else:
-                self.movement = 0
+        #if device == 1 and input == 2:
+        #    if action == 0:
+        #        self.movement = 1
+        #    else:
+        #        self.movement = 0
 
     def processOneThing(self):
-        if self.movement:
-            if self.direction == 1:
-                self.xRotationSliderWidget.value += 1
-                self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
-            elif self.direction == 2:
-                self.xRotationSliderWidget.value -= 1
-                self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
-            elif self.direction == 3:
-                self.zRotationSliderWidget.value += 1
-                self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
-            elif self.direction == 4:
-                self.zRotationSliderWidget.value -= 1
-                self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
-            else:
-                print("Invalid C-arm Movement Direction")
+        #if self.movement:
+        if self.direction == 1:
+            self.xRotationSliderWidget.value += 1
+            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
+        elif self.direction == 2:
+            self.xRotationSliderWidget.value -= 1
+            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
+        elif self.direction == 3:
+            self.zRotationSliderWidget.value += 1
+            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+        elif self.direction == 4:
+            self.zRotationSliderWidget.value -= 1
+            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+
 
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
@@ -198,19 +205,28 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         #self.interactorObserver = slicer.modules.virtualReality
 
-        # Grab gesturerecognition logic instance so we can observe for events
-        self.gestureObserver = slicer.modules.gesturerecognition.logic()
-        self.useGestureRecognition = True
-        self.gestureObserverNum = 0
-        if self.gestureObserver is None:
-            self.useGestureRecognition = False
+        for i in slicer.app.topLevelWidgets():
+            if i.name == "VirtualRealityWidget":
+                w = i
 
+        if w:
+            self.vrInteractor = w.renderWindow().GetInteractor()
+            self.vrInteractorObserver = self.vrInteractor.AddObserver(123456, self.interactorCallback)
+
+        # Grab gesturerecognition logic instance so we can observe for events
+        #self.gestureObserver = slicer.modules.gesturerecognition.logic()
+        #self.useGestureRecognition = True
+        #self.gestureObserverNum = 0
+        #if not self.gestureObserver:
+        #    self.useGestureRecognition = False
+
+        #self.useGestureRecognition = False
         self.timer = qt.QTimer()
         self.elapsed = qt.QElapsedTimer()
         self.timerIteration = 0
-        self.timer.connect('timeout()', self.processOneThing)
         self.movement = 1
         self.direction = 0
+        self.timer.connect('timeout()', self.processOneThing)
         #self.timer.setInterval(30)
         self.timer.start()
 
@@ -231,21 +247,13 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.UpdateWagRotation(value)
 
     def onToggleDRRButtonClicked(self, value):
-        if self.movement == 1:
-            self.movement = 0
-        else:
-            self.movement = 1
-        if self.direction == 4:
-            self.direction = 0
-        self.direction += 1
-
         self.logic.ToggleDRR(value)
 
     def onGenerateSceneButtonClicked(self, value):
-        if self.useGestureRecognition == True:
-            if self.gestureObserverNum != 0:
-                self.gestureObserver.RemoveObserver(self.gestureObserverNum)
-            self.gestureObserverNum = self.gestureObserver.AddObserver(self.gestureObserver.GestureRecognizedEvent, self.updateTransforms)
+        #if self.useGestureRecognition == True:
+            #if self.gestureObserverNum != 0:
+                #self.gestureObserver.RemoveObserver(self.gestureObserverNum)
+            #self.gestureObserverNum = self.gestureObserver.AddObserver(self.gestureObserver.GestureRecognizedEvent, self.updateTransforms)
         self.logic.GenerateScene(value)
 
     def onNeedleValuesChanged(self, value):
