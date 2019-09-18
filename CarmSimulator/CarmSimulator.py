@@ -71,18 +71,21 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         device = matr.GetElement(0,2)
         input = matr.GetElement(0,3)
         action = matr.GetElement(1,0)
+        print("Input")  # 0 for trigger 1 for trackpad
+        print(input)
+        print("Action") # 2.0 for pressed 3.0 for released
+        print(action)
 
         if trackpadPositionX == 0:
-            if input == 1:
+            if input == 0 and action == 3.0: # Only take Fluoro Snapshot when trigger is released
                 self.logic.ToggleDRR(True)
                 self.logic.UpdateDRR()
                 self.logic.ToggleDRR(False)
-                return
             self.direction = 0
             return
 
         # Set C-arm Movement Direction
-        if device == 0:
+        if device == 1:
             if trackpadPositionX > 0:
                 if trackpadPositionY > 0:
                     self.direction = 1
@@ -93,7 +96,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
                     self.direction  = 3
                 else:
                     self.direction = 4
-        elif device == 1:
+        elif device == 2:
             if trackpadPositionX > 0:
                 if trackpadPositionY > 0:
                     self.direction = 5
@@ -128,16 +131,16 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
             self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
         elif self.direction == 5:
             self.wagRotationSliderWidget.value += 1
-            self.logic.UpdateCRotation(self.wagRotationSliderWidget.value)
+            self.logic.UpdateWagRotation(self.wagRotationSliderWidget.value)
         elif self.direction == 6:
             self.wagRotationSliderWidget.value -= 1
-            self.logic.UpdateCRotation(self.wagRotationSliderWidget.value)
+            self.logic.UpdateWagRotation(self.wagRotationSliderWidget.value)
         elif self.direction == 7:
-            self.tableTranslationSliderWidget.value += 1
-            self.logic.UpdateGantryRotation(self.tableTranslationSliderWidget.value)
+            self.tableSliderWidget.value += 1
+            self.logic.UpdateTable(self.tableSliderWidget.value)
         elif self.direction == 8:
-            self.tableTranslationSliderWidget.value -= 1
-            self.logic.UpdateGantryRotation(self.tableTranslationSliderWidget.value)
+            self.tableSliderWidget.value -= 1
+            self.logic.UpdateTable(self.tableSliderWidget.value)
 
 
 
