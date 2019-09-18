@@ -68,27 +68,43 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         #print(matr)
         trackpadPositionX = matr.GetElement(0,0)
         trackpadPositionY = matr.GetElement(0,1)
-
-
-        if trackpadPositionX == 0:
-            self.direction = 0
-            return
-
         device = matr.GetElement(0,2)
         input = matr.GetElement(0,3)
         action = matr.GetElement(1,0)
 
+        if trackpadPositionX == 0:
+            if input == 1:
+                self.logic.ToggleDRR(True)
+                self.logic.UpdateDRR()
+                self.logic.ToggleDRR(False)
+                return
+            self.direction = 0
+            return
+
         # Set C-arm Movement Direction
-        if trackpadPositionX > 0:
-            if trackpadPositionY > 0:
-                self.direction = 1
+        if device == 0:
+            if trackpadPositionX > 0:
+                if trackpadPositionY > 0:
+                    self.direction = 1
+                else:
+                    self.direction = 2
             else:
-                self.direction = 2
-        else:
-            if trackpadPositionY > 0:
-                self.direction  = 3
+                if trackpadPositionY > 0:
+                    self.direction  = 3
+                else:
+                    self.direction = 4
+        elif device == 1:
+            if trackpadPositionX > 0:
+                if trackpadPositionY > 0:
+                    self.direction = 5
+                else:
+                    self.direction = 6
             else:
-                self.direction = 4
+                if trackpadPositionY > 0:
+                    self.direction = 7
+                else:
+                    self.direction = 8
+
         # if right controller and trigger
         #if device == 1 and input == 2:
         #    if action == 0:
@@ -110,6 +126,19 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         elif self.direction == 4:
             self.zRotationSliderWidget.value -= 1
             self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
+        elif self.direction == 5:
+            self.wagRotationSliderWidget.value += 1
+            self.logic.UpdateCRotation(self.wagRotationSliderWidget.value)
+        elif self.direction == 6:
+            self.wagRotationSliderWidget.value -= 1
+            self.logic.UpdateCRotation(self.wagRotationSliderWidget.value)
+        elif self.direction == 7:
+            self.tableTranslationSliderWidget.value += 1
+            self.logic.UpdateGantryRotation(self.tableTranslationSliderWidget.value)
+        elif self.direction == 8:
+            self.tableTranslationSliderWidget.value -= 1
+            self.logic.UpdateGantryRotation(self.tableTranslationSliderWidget.value)
+
 
 
     def setup(self):
@@ -136,6 +165,11 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.toggleDRRButton = qt.QCheckBox()
         self.toggleDRRButton.connect('toggled(bool)', self.onToggleDRRButtonClicked)
         parametersFormLayout.addRow("Toggle DRR", self.toggleDRRButton)
+
+        # Toggle VR Button - TO DO
+        self.toggleVRButton = qt.QCheckBox()
+        self.toggleVRButton.connect('toggled(bool)', self.onToggleVRButtonClicked)
+        parametersFormLayout.addRow("Toggle VR", self.toggleVRButton)
 
         # Transfer Function Presets
         self.fluoroButton = qt.QRadioButton()
@@ -190,28 +224,33 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.wagRotationSliderWidget.connect('valueChanged(double)', self.onWagRotationValuesChanged)
         parametersFormLayout.addRow("Wag Rotation", self.wagRotationSliderWidget)
 
+        self.tableSliderWidget = ctk.ctkSliderWidget()
+        self.tableSliderWidget.singleStep = 0.1
+        self.tableSliderWidget.minimum = -55
+        self.tableSliderWidget.maximum = 55
+        self.tableSliderWidget.value = 0.0
+        self.tableSliderWidget.setToolTip("Table Translation.")
+        self.tableSliderWidget.connect('valueChanged(double)', self.onTableValuesChanged)
+        parametersFormLayout.addRow("Table Translation", self.tableSliderWidget)
+
         # Needle Slider
-        self.needleSliderWidget = ctk.ctkSliderWidget()
-        self.needleSliderWidget.singleStep = 0.1
-        self.needleSliderWidget.minimum = -55
-        self.needleSliderWidget.maximum = 55
-        self.needleSliderWidget.value = 0.0
-        self.needleSliderWidget.setToolTip("Needle Translation.")
-        self.needleSliderWidget.connect('valueChanged(double)', self.onNeedleValuesChanged)
-        parametersFormLayout.addRow("Needle Translation", self.needleSliderWidget)
+        #self.needleSliderWidget = ctk.ctkSliderWidget()
+        #self.needleSliderWidget.singleStep = 0.1
+        #self.needleSliderWidget.minimum = -55
+        #self.needleSliderWidget.maximum = 55
+        #self.needleSliderWidget.value = 0.0
+        #self.needleSliderWidget.setToolTip("Needle Translation.")
+        #self.needleSliderWidget.connect('valueChanged(double)', self.onNeedleValuesChanged)
+        #parametersFormLayout.addRow("Needle Translation", self.needleSliderWidget)
 
         # Create Logic Instance
         self.logic = CarmSimulatorLogic()
 
         #self.interactorObserver = slicer.modules.virtualReality
 
-        for i in slicer.app.topLevelWidgets():
-            if i.name == "VirtualRealityWidget":
-                w = i
+        self.vrInteractorObserver = 0
+        self.gestureObserverNum = 0
 
-        if w:
-            self.vrInteractor = w.renderWindow().GetInteractor()
-            self.vrInteractorObserver = self.vrInteractor.AddObserver(123456, self.interactorCallback)
 
         # Grab gesturerecognition logic instance so we can observe for events
         #self.gestureObserver = slicer.modules.gesturerecognition.logic()
@@ -249,6 +288,20 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
     def onToggleDRRButtonClicked(self, value):
         self.logic.ToggleDRR(value)
 
+    def onToggleVRButtonClicked(self, value):
+
+        w = None
+        for i in slicer.app.topLevelWidgets():
+            if i.name == "VirtualRealityWidget":
+                w = i
+
+        if not w:
+            print("Could not connect to VR")
+            return
+
+        self.vrInteractor = w.renderWindow().GetInteractor()
+        self.vrInteractorObserver = self.vrInteractor.AddObserver(123456, self.interactorCallback)
+
     def onGenerateSceneButtonClicked(self, value):
         #if self.useGestureRecognition == True:
             #if self.gestureObserverNum != 0:
@@ -259,6 +312,9 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
     def onNeedleValuesChanged(self, value):
         self.logic.UpdateNeedle(value)
 
+    def onTableValuesChanged(self, value):
+        self.logic.UpdateTable(value)
+
     def onFieldOfViewValueChanged(self, value):
         self.logic.ChangeFOV(value)
 
@@ -266,8 +322,12 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.ChangeZoomFactor(value)
 
     def cleanup(self):
-        if self.gestureObserverNum != 0:
+        if self.gestureObserverNum is not 0:
             self.gestureObserver.RemoveObserver(self.gestureObserverNum)
+
+        if self.vrInteractorObserver is not 0:
+            self.vrInteractor.RemoveObserver(self.vtInteractorObserver)
+
 
         print("HELLO")
         # Cleanup any memory leaks
@@ -333,13 +393,16 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.cRotation = vtk.vtkTransform()
         self.gantryRotation = vtk.vtkTransform()
         self.wagRotation = vtk.vtkTransform()
+        self.tableTranslationTransform = vtk.vtkTransform()
         self.focalPointTransform = vtk.vtkTransform()
         self.xRotationValue = 0.0
         self.zRotationValue = 0.0
         self.yRotationValue = 0.0
+        self.tableTranslation = 0.0
         self.zoomFactor = 0.0
         self.DRRInitialized = False
         self.toggleDRR = False
+        self.planeModelNode = None
 
     def GenerateScene(self, value):
         # Load in models from resources folder if they are not in the scene already
@@ -413,6 +476,10 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         if self.spinePlateTransform is None:
             self.spinePlateTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SpinePlateTransform.h5'))
 
+        self.tableZTranslation = slicer.mrmlScene.GetNodesByName("TableZTranslation").GetItemAsObject(0)
+        if self.tableZTranslation is None:
+            self.tableZTranslation = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/TableZTranslation.h5'))
+
         self.wagTransform = slicer.mrmlScene.GetNodesByName("WagTransform").GetItemAsObject(0)
         if self.wagTransform is None:
             self.wagTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/WagTransform.h5'))
@@ -421,11 +488,13 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         # Set up transform hierarchy
         self.cTransform.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
         self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.spinePlateTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.spinePlateTransform.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
         self.fluoroDisplayTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.gantryTransform.SetAndObserveTransformNodeID(self.wagTransform.GetID())
         self.dRRToMonitorTransform.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
         self.wagTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.floorTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        self.tableZTranslation.SetAndObserveTransformNodeID(self.tableTransform.GetID())
 
         self.supportModel.SetAndObserveTransformNodeID(self.wagTransform.GetID())
         self.cModel.SetAndObserveTransformNodeID(self.cTransform.GetID())
@@ -433,7 +502,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.fluoroDisplayModel.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
         self.gantryModel.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
         self.spinePlateModel.SetAndObserveTransformNodeID(self.spinePlateTransform.GetID())
-        self.tableModel.SetAndObserveTransformNodeID(self.tableTransform.GetID())
+        self.tableModel.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
 
         # Load volume and set transfer function if not in scene already
         self.lumbarSpineVolume = slicer.mrmlScene.GetNodesByName("LumbarSpinePhantom_CT").GetItemAsObject(0)
@@ -460,6 +529,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
             self.slicerRenderer.Render()
             self.UpdateDRR()
             # self.UpdateCRotation(self.zRotationValue)
+
 
     def ChangeZoomFactor(self, value):
         self.zoomFactor = value
@@ -617,11 +687,17 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         if self.toggleDRR == True:
             self.UpdateDRR()
 
+    def UpdateTable(self, value):
+        self.tableTranslation = value
+        self.tableTranslationTransform.Identity()
+        self.tableTranslationTransform.Translate(0,4*value,0)
+        self.tableZTranslation.SetMatrixTransformToParent(self.tableTranslationTransform.GetMatrix())
+        if self.toggleDRR == True:
+            self.UpdateDRR()
+
     def cleanup(self):
-        if self.planeModelNode is not None:
+        if not self.planeModelNode:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
-
-
 
 class CarmSimulatorTest(ScriptedLoadableModuleTest):
     """
