@@ -71,34 +71,51 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         device = matr.GetElement(0,2)
         input = matr.GetElement(0,3)
         action = matr.GetElement(1,0)
-        print("Input")  # 0 for trigger 1 for trackpad
-        print(input)
-        print("Action") # 2.0 for pressed 3.0 for released
-        print(action)
+        #print("Input")  # 0 for trigger 1 for trackpad
+        #print(input)
+        #print("Action") # 2.0 for pressed 3.0 for released
+        #print(action)
 
-        if trackpadPositionX == 0:
-            if input == 0 and action == 3: # Only take Fluoro Snapshot when trigger is released
+        # Do Nothing unless we receive a release event from the trigger
+        if input == 0:
+            if action == 3.0:
                 self.logic.ToggleDRR(True)
                 self.logic.UpdateDRR()
                 self.logic.ToggleDRR(False)
+            return
+
+        if trackpadPositionX == 0:
             self.direction = 0
             return
 
         # Set C-arm Movement Direction
-        if trackpadPositionX > 0:
-            if trackpadPositionY > 0:
-                self.direction = 1*device
+        if device == 1:
+            if trackpadPositionX > 0:
+                if trackpadPositionY > 0:
+                    self.direction = 1
+                else:
+                    self.direction = 2
             else:
-                self.direction = 2*device
-        else:
-            if trackpadPositionY > 0:
-                self.direction = 3*device
+                if trackpadPositionY > 0:
+                    self.direction = 3
+                else:
+                    self.direction = 4
+        elif device == 2:
+            if trackpadPositionX > 0:
+                if trackpadPositionY > 0:
+                    self.direction = 5
+                else:
+                    self.direction = 6
             else:
-                self.direction = 4*device
+                if trackpadPositionY > 0:
+                    self.direction = 7
+                else:
+                    self.direction = 8
 
 
     def processOneThing(self):
         #if self.movement:
+        #print(direction)
         if self.direction == 1:
             self.xRotationSliderWidget.value += 1
             self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
@@ -311,7 +328,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         #    self.gestureObserver.RemoveObserver(self.gestureObserverNum)
 
         if self.vrInteractor is not None:
-            self.vrInteractor.RemoveObserver(self.vtInteractorObserver)
+            self.vrInteractor.RemoveObserver(self.vrInteractorObserver)
 
 
         print("HELLO")
@@ -451,7 +468,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
 
         self.sceneTransform = slicer.mrmlScene.GetNodesByName("SceneTransform").GetItemAsObject(0)
         if self.sceneTransform is None:
-            self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SceneTransform.h5'))
+            self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SceneTransform2.h5'))
+        self.sceneTransform.SetSelectable(False)
 
         self.tableTransform = slicer.mrmlScene.GetNodesByName("TableTransform").GetItemAsObject(0)
         if self.tableTransform is None:
@@ -683,8 +701,12 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
             self.UpdateDRR()
 
     def cleanup(self):
-        if self.planeModelNode is None:
+        try:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
+        except:
+            print("DRR Model has not been initialized")
+
+        del self.winToImage
 
 class CarmSimulatorTest(ScriptedLoadableModuleTest):
     """
