@@ -78,11 +78,15 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         # Do Nothing unless we receive a release event from the trigger
         if input == 0:
-            if action == 3.0:
-                self.logic.ToggleDRR(True)
-                self.logic.UpdateDRR()
-                self.logic.ToggleDRR(False)
+            if action == 3:
+                if device == 1:
+                    self.logic.ToggleDRR(True)
+                    self.logic.UpdateDRR()
+                    self.logic.ToggleDRR(False)
+                elif device == 2:
+                    self.logic.CollectImage(True)
             return
+
 
         if trackpadPositionX == 0:
             self.direction = 0
@@ -235,6 +239,17 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.tableSliderWidget.connect('valueChanged(double)', self.onTableValuesChanged)
         parametersFormLayout.addRow("Table Translation", self.tableSliderWidget)
 
+        # Start Module Button
+        self.startModuleButton = qt.QPushButton('Start Module')
+        self.startModuleButton.connect('clicked(bool)', self.onStartModuleButtonClicked)
+        parametersFormLayout.addRow(self.startModuleButton)
+
+        self.collectImageButton = qt.QPushButton('Collect Image')
+        # Generate Scene Button
+        self.collectImageButton.connect('clicked(bool)', self.onCollectImageButtonClicked)
+        # self.generateSceneButton.setDisabled(True)
+        parametersFormLayout.addRow(self.collectImageButton)
+
         # Needle Slider
         #self.needleSliderWidget = ctk.ctkSliderWidget()
         #self.needleSliderWidget.singleStep = 0.1
@@ -310,6 +325,9 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
                 #self.gestureObserver.RemoveObserver(self.gestureObserverNum)
             #self.gestureObserverNum = self.gestureObserver.AddObserver(self.gestureObserver.GestureRecognizedEvent, self.updateTransforms)
         self.logic.GenerateScene(value)
+
+    def onCollectImageButtonClicked(self, value):
+
 
     def onNeedleValuesChanged(self, value):
         self.logic.UpdateNeedle(value)
@@ -699,6 +717,12 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.tableZTranslation.SetMatrixTransformToParent(self.tableTranslationTransform.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
+
+    def StartModule(self, value):
+        print("TEST")
+
+    def CollectImage(self, value):
+        print("TEST2")
 
     def cleanup(self):
         try:
