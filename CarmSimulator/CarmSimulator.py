@@ -77,7 +77,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         print(action)
 
         if trackpadPositionX == 0:
-            if input == 0 and action == 3.0: # Only take Fluoro Snapshot when trigger is released
+            if input == 0 and action == 3: # Only take Fluoro Snapshot when trigger is released
                 self.logic.ToggleDRR(True)
                 self.logic.UpdateDRR()
                 self.logic.ToggleDRR(False)
@@ -85,35 +85,17 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
             return
 
         # Set C-arm Movement Direction
-        if device == 1:
-            if trackpadPositionX > 0:
-                if trackpadPositionY > 0:
-                    self.direction = 1
-                else:
-                    self.direction = 2
+        if trackpadPositionX > 0:
+            if trackpadPositionY > 0:
+                self.direction = 1*device
             else:
-                if trackpadPositionY > 0:
-                    self.direction  = 3
-                else:
-                    self.direction = 4
-        elif device == 2:
-            if trackpadPositionX > 0:
-                if trackpadPositionY > 0:
-                    self.direction = 5
-                else:
-                    self.direction = 6
+                self.direction = 2*device
+        else:
+            if trackpadPositionY > 0:
+                self.direction = 3*device
             else:
-                if trackpadPositionY > 0:
-                    self.direction = 7
-                else:
-                    self.direction = 8
+                self.direction = 4*device
 
-        # if right controller and trigger
-        #if device == 1 and input == 2:
-        #    if action == 0:
-        #        self.movement = 1
-        #    else:
-        #        self.movement = 0
 
     def processOneThing(self):
         #if self.movement:
@@ -253,7 +235,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         self.vrInteractorObserver = 0
         self.gestureObserverNum = 0
-
+        self.vrInteractor = None
 
         # Grab gesturerecognition logic instance so we can observe for events
         #self.gestureObserver = slicer.modules.gesturerecognition.logic()
@@ -298,7 +280,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
             if i.name == "VirtualRealityWidget":
                 w = i
 
-        if not w:
+        if w is None:
             print("Could not connect to VR")
             return
 
@@ -325,10 +307,10 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.ChangeZoomFactor(value)
 
     def cleanup(self):
-        if self.gestureObserverNum is not 0:
-            self.gestureObserver.RemoveObserver(self.gestureObserverNum)
+        #if self.gestureObserverNum is not 0:
+        #    self.gestureObserver.RemoveObserver(self.gestureObserverNum)
 
-        if self.vrInteractorObserver is not 0:
+        if self.vrInteractor is not None:
             self.vrInteractor.RemoveObserver(self.vtInteractorObserver)
 
 
@@ -401,7 +383,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.xRotationValue = 0.0
         self.zRotationValue = 0.0
         self.yRotationValue = 0.0
-        self.tableTranslation = 0.0
+        self.tableTranslationValue = 0.0
         self.zoomFactor = 0.0
         self.DRRInitialized = False
         self.toggleDRR = False
@@ -634,6 +616,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         #self.cameraTransform.Translate(-1262.2704, -337.5527, 5.7)
         self.cameraTransform.RotateY(-self.yRotationValue)
         self.cameraTransform.Translate(-200, 0, 0)
+        self.cameraTransform.Translate(0,0,self.tableTranslationValue)
         #self.cameraTransform.Translate(1262.2704, 337.5527, -5.7)
 
 
@@ -641,6 +624,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.focalPointTransform.Translate(200, 0, 0)
         self.focalPointTransform.RotateY(self.yRotationValue)
         self.focalPointTransform.Translate(-200, 0, 0)
+        self.focalPointTransform.Translate(0,0,self.tableTranslationValue)
         zAxis = [0,0,0,0]
         up = [0,0,1,0]
         self.cameraTransform.MultiplyPoint(up, zAxis)
@@ -691,15 +675,15 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
             self.UpdateDRR()
 
     def UpdateTable(self, value):
-        self.tableTranslation = value
+        self.tableTranslationValue = value
         self.tableTranslationTransform.Identity()
-        self.tableTranslationTransform.Translate(0,4*value,0)
+        self.tableTranslationTransform.Translate(0,4*self.tableTranslationValue,0)
         self.tableZTranslation.SetMatrixTransformToParent(self.tableTranslationTransform.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
     def cleanup(self):
-        if not self.planeModelNode:
+        if self.planeModelNode is None:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
 
 class CarmSimulatorTest(ScriptedLoadableModuleTest):
