@@ -4,6 +4,8 @@ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
 import copy
+from CarmSimulatorScene import CarmSimulatorScene
+#import CarmSimulatorScene
 
 
 #
@@ -400,6 +402,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         # Get Volume from mrml Scene
         #self.volume = self.slicerRenderer.GetVolumes().GetItemAsObject(0)
 
+        self.scene = CarmSimulatorScene()
+
         # Set up FOV and dummy renderer
         self.renderer = vtk.vtkRenderer()
         self.rendererFOV = vtk.vtkRenderer()
@@ -450,161 +454,162 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.DRRInitialized = False
         self.toggleDRR = False
 
-        # Initialize Models
-        self.cModel = None
-        self.floorModel = None
-        self.fluoroDisplayModel = None
-        self.gantryModel = None
-        self.supportModel = None
-        self.spinePlateModel = None
-        self.tableModel = None
+        # Initialize DRR Model
         self.planeModelNode = None
 
-        # Initialize Transforms
-        self.cTransform = None
-        self.gantryTransform = None
-        self.fluoroDisplayTransform = None
-        self.dRRToMonitorTransform = None
-        self.spinePlateTransform = None
-        self.floorTransform = None
-        self.tableZTranslation = None
-        self.wagTransform = None
-        self.tableTransform = None
-        self.sceneTransform = None
+
 
     def GenerateScene(self, value):
+
+        self.scene.GenerateScene()
         # Load in models from resources folder if they are not in the scene already
-
-        self.cModel = slicer.mrmlScene.GetNodesByName("C").GetItemAsObject(0)
-        if self.cModel is None:
-            self.cModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/C.stl'))
-            self.cModel.GetDisplayNode().SetColor(0.91, 0.91, 0.91)
-        self.cModel.SetSelectable(False)
-
-        self.floorModel = slicer.mrmlScene.GetNodesByName("Floor").GetItemAsObject(0)
-        if self.floorModel is None:
-            self.floorModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Floor.stl'))
-            self.floorModel.GetDisplayNode().SetColor(1, 1, 1)
-        self.floorModel.SetSelectable(False)
-
-        self.fluoroDisplayModel = slicer.mrmlScene.GetNodesByName("FluoroDisplayV2").GetItemAsObject(0)
-        if self.fluoroDisplayModel is None:
-            self.fluoroDisplayModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/FluoroDisplayV2.stl'))
-            self.fluoroDisplayModel.GetDisplayNode().SetColor(0.5, 0.5, 0.5)
-        self.fluoroDisplayModel.SetSelectable(False)
-
-
-        self.gantryModel = slicer.mrmlScene.GetNodesByName("GantryV3").GetItemAsObject(0)
-        if self.gantryModel is None:
-            self.gantryModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/GantryV3.stl'))
-            self.gantryModel.GetDisplayNode().SetColor(0.79, 0.79, 0.79)
-
-        self.gantryModel.SetSelectable(False)
-
-
-        # self.spinePlateModel = slicer.mrmlScene.GetNodesByName("SpinePlate").GetItemAsObject(0)
+        # try:
+        #     cModel = slicer.util.getNode("C")
+        # except:
+        #     cModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/C.stl'))
+        #     cModel.GetDisplayNode().SetColor(0.91, 0.91, 0.91)
+        # cModel.SetSelectable(False)
+        #
+        # try:
+        #     gantryModel = slicer.util.getNode("GantryV3")
+        # except:
+        #     gantryModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/GantryV3.stl'))
+        #     gantryModel.GetDisplayNode().SetColor(0.79, 0.79, 0.79)
+        # gantryModel.SetSelectable(False)
+        #
+        # try:
+        #     floorModel = slicer.util.getNode("Floor")
+        # except:
+        #     floorModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Floor.stl'))
+        #     floorModel.GetDisplayNode().SetColor(1, 1, 1)
+        # gantryModel.SetSelectable(False)
+        #
+        #
+        #
+        # floorModel = slicer.mrmlScene.GetNodesByName("Floor").GetItemAsObject(0)
+        # if self.floorModel is None:
+        #     self.floorModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Floor.stl'))
+        #     self.floorModel.GetDisplayNode().SetColor(1, 1, 1)
+        # self.floorModel.SetSelectable(False)
+        #
+        # self.fluoroDisplayModel = slicer.mrmlScene.GetNodesByName("FluoroDisplayV2").GetItemAsObject(0)
+        # if self.fluoroDisplayModel is None:
+        #     self.fluoroDisplayModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/FluoroDisplayV2.stl'))
+        #     self.fluoroDisplayModel.GetDisplayNode().SetColor(0.5, 0.5, 0.5)
+        # self.fluoroDisplayModel.SetSelectable(False)
+        #
+        #
+        # self.gantryModel = slicer.mrmlScene.GetNodesByName("GantryV3").GetItemAsObject(0)
+        # if self.gantryModel is None:
+        #     self.gantryModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/GantryV3.stl'))
+        #     self.gantryModel.GetDisplayNode().SetColor(0.79, 0.79, 0.79)
+        #
+        # self.gantryModel.SetSelectable(False)
+        #
+        #
+        # # self.spinePlateModel = slicer.mrmlScene.GetNodesByName("SpinePlate").GetItemAsObject(0)
+        # # if self.spinePlateModel is None:
+        # #     self.spinePlateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/SpinePlate.stl'))
+        # #     self.spinePlateModel.GetDisplayNode().SetColor(1, 0, 0)
+        # # self.spinePlateModel.SetSelectable(False)
+        #
+        # self.spinePlateModel = slicer.mrmlScene.GetNodesByName("SpinePlateModel2.stl").GetItemAsObject(0)
         # if self.spinePlateModel is None:
-        #     self.spinePlateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/SpinePlate.stl'))
-        #     self.spinePlateModel.GetDisplayNode().SetColor(1, 0, 0)
+        #     self.spinePlateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/SpinePlateModel2.stl'))
+        #     self.spinePlateModel.GetDisplayNode().SetColor(0.7, 0.48, 0.4)
         # self.spinePlateModel.SetSelectable(False)
-
-        self.spinePlateModel = slicer.mrmlScene.GetNodesByName("SpinePlateModel2.stl").GetItemAsObject(0)
-        if self.spinePlateModel is None:
-            self.spinePlateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/SpinePlateModel2.stl'))
-            self.spinePlateModel.GetDisplayNode().SetColor(0.7, 0.48, 0.4)
-        self.spinePlateModel.SetSelectable(False)
-
-
-        self.tableModel = slicer.mrmlScene.GetNodesByName("Stanless steel table").GetItemAsObject(0)
-        if self.tableModel is None:
-            self.tableModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Stanless steel table.stl'))
-            self.tableModel.GetDisplayNode().SetColor(0.5, 0.5, 0.5)
-        self.tableModel.SetSelectable(False)
-
-
-        self.supportModel = slicer.mrmlScene.GetNodesByName("Support").GetItemAsObject(0)
-        if self.supportModel is None:
-            self.supportModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Support.stl'))
-            self.supportModel.GetDisplayNode().SetColor(0.96, 0.96, 0.96)
-
-        self.supportModel.SetSelectable(False)
-
-        # # Load in transforms if they are not already in the scene
-        self.cTransform = slicer.mrmlScene.GetNodesByName("CTransform").GetItemAsObject(0)
-        if self.cTransform is None:
-            self.cTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/CTransform.h5'))
-
-        self.gantryTransform = slicer.mrmlScene.GetNodesByName("GantryTransform").GetItemAsObject(0)
-        if self.gantryTransform is None:
-            self.gantryTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/GantryTransform.h5'))
-
-        self.dRRToMonitorTransform = slicer.mrmlScene.GetNodesByName("DRRToMonitor").GetItemAsObject(0)
-        if self.dRRToMonitorTransform is None:
-            self.dRRToMonitorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/DRRToMonitor.h5'))
-
-        self.floorTransform = slicer.mrmlScene.GetNodesByName("FloorTransform").GetItemAsObject(0)
-        if self.floorTransform is None:
-            self.floorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/FloorTransform.h5'))
-
-        self.fluoroDisplayTransform = slicer.mrmlScene.GetNodesByName("FluoroDisplayTransform").GetItemAsObject(0)
-        if self.fluoroDisplayTransform is None:
-            self.fluoroDisplayTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/FluoroDisplayTransform.h5'))
-
-        self.sceneTransform = slicer.mrmlScene.GetNodesByName("SceneTransform").GetItemAsObject(0)
-        if self.sceneTransform is None:
-            self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SceneTransform.h5'))
-        self.sceneTransform.SetSelectable(False)
-
-        self.tableTransform = slicer.mrmlScene.GetNodesByName("TableTransform").GetItemAsObject(0)
-        if self.tableTransform is None:
-            self.tableTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/TableTransform.h5'))
-
-        self.spinePlateTransform = slicer.mrmlScene.GetNodesByName("SpinePlateTransform").GetItemAsObject(0)
-        if self.spinePlateTransform is None:
-            self.spinePlateTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SpinePlateTransform.h5'))
-
-        self.tableZTranslation = slicer.mrmlScene.GetNodesByName("TableZTranslation").GetItemAsObject(0)
-        if self.tableZTranslation is None:
-            self.tableZTranslation = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/TableZTranslation.h5'))
-
-        self.wagTransform = slicer.mrmlScene.GetNodesByName("WagTransform").GetItemAsObject(0)
-        if self.wagTransform is None:
-            self.wagTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/WagTransform.h5'))
+        #
+        #
+        # self.tableModel = slicer.mrmlScene.GetNodesByName("Stanless steel table").GetItemAsObject(0)
+        # if self.tableModel is None:
+        #     self.tableModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Stanless steel table.stl'))
+        #     self.tableModel.GetDisplayNode().SetColor(0.5, 0.5, 0.5)
+        # self.tableModel.SetSelectable(False)
+        #
+        #
+        # self.supportModel = slicer.mrmlScene.GetNodesByName("Support").GetItemAsObject(0)
+        # if self.supportModel is None:
+        #     self.supportModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Support.stl'))
+        #     self.supportModel.GetDisplayNode().SetColor(0.96, 0.96, 0.96)
+        #
+        # self.supportModel.SetSelectable(False)
+        #
+        # # # Load in transforms if they are not already in the scene
+        # self.cTransform = slicer.mrmlScene.GetNodesByName("CTransform").GetItemAsObject(0)
+        # if self.cTransform is None:
+        #     self.cTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/CTransform.h5'))
+        #
+        # self.gantryTransform = slicer.mrmlScene.GetNodesByName("GantryTransform").GetItemAsObject(0)
+        # if self.gantryTransform is None:
+        #     self.gantryTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/GantryTransform.h5'))
+        #
+        # self.dRRToMonitorTransform = slicer.mrmlScene.GetNodesByName("DRRToMonitor").GetItemAsObject(0)
+        # if self.dRRToMonitorTransform is None:
+        #     self.dRRToMonitorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/DRRToMonitor.h5'))
+        #
+        # self.floorTransform = slicer.mrmlScene.GetNodesByName("FloorTransform").GetItemAsObject(0)
+        # if self.floorTransform is None:
+        #     self.floorTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/FloorTransform.h5'))
+        #
+        # self.fluoroDisplayTransform = slicer.mrmlScene.GetNodesByName("FluoroDisplayTransform").GetItemAsObject(0)
+        # if self.fluoroDisplayTransform is None:
+        #     self.fluoroDisplayTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/FluoroDisplayTransform.h5'))
+        #
+        # self.sceneTransform = slicer.mrmlScene.GetNodesByName("SceneTransform").GetItemAsObject(0)
+        # if self.sceneTransform is None:
+        #     self.sceneTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SceneTransform.h5'))
+        # self.sceneTransform.SetSelectable(False)
+        #
+        # self.tableTransform = slicer.mrmlScene.GetNodesByName("TableTransform").GetItemAsObject(0)
+        # if self.tableTransform is None:
+        #     self.tableTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/TableTransform.h5'))
+        #
+        # self.spinePlateTransform = slicer.mrmlScene.GetNodesByName("SpinePlateTransform").GetItemAsObject(0)
+        # if self.spinePlateTransform is None:
+        #     self.spinePlateTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/SpinePlateTransform.h5'))
+        #
+        # self.tableZTranslation = slicer.mrmlScene.GetNodesByName("TableZTranslation").GetItemAsObject(0)
+        # if self.tableZTranslation is None:
+        #     self.tableZTranslation = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/TableZTranslation.h5'))
+        #
+        # self.wagTransform = slicer.mrmlScene.GetNodesByName("WagTransform").GetItemAsObject(0)
+        # if self.wagTransform is None:
+        #     self.wagTransform = slicer.util.loadTransform(os.path.join(self.resourcePath, 'Resources/WagTransform.h5'))
 
 
-        #Set up transform hierarchy
-        self.cTransform.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
-        self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.spinePlateTransform.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
-        self.fluoroDisplayTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.gantryTransform.SetAndObserveTransformNodeID(self.wagTransform.GetID())
-        self.dRRToMonitorTransform.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
-        self.wagTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.floorTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
-        self.tableZTranslation.SetAndObserveTransformNodeID(self.tableTransform.GetID())
+        # #Set up transform hierarchy
+        # self.cTransform.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
+        # self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        # self.spinePlateTransform.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
+        # self.fluoroDisplayTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        # self.gantryTransform.SetAndObserveTransformNodeID(self.wagTransform.GetID())
+        # self.dRRToMonitorTransform.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
+        # self.wagTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        # self.floorTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+        # self.tableZTranslation.SetAndObserveTransformNodeID(self.tableTransform.GetID())
+        #
+        # self.supportModel.SetAndObserveTransformNodeID(self.wagTransform.GetID())
+        # self.cModel.SetAndObserveTransformNodeID(self.cTransform.GetID())
+        # self.floorModel.SetAndObserveTransformNodeID(self.floorTransform.GetID())
+        # self.fluoroDisplayModel.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
+        # self.gantryModel.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
+        # self.spinePlateModel.SetAndObserveTransformNodeID(self.spinePlateTransform.GetID())
+        # self.tableModel.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
 
-        self.supportModel.SetAndObserveTransformNodeID(self.wagTransform.GetID())
-        self.cModel.SetAndObserveTransformNodeID(self.cTransform.GetID())
-        self.floorModel.SetAndObserveTransformNodeID(self.floorTransform.GetID())
-        self.fluoroDisplayModel.SetAndObserveTransformNodeID(self.fluoroDisplayTransform.GetID())
-        self.gantryModel.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
-        self.spinePlateModel.SetAndObserveTransformNodeID(self.spinePlateTransform.GetID())
-        self.tableModel.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
-
-        #Load volume and set transfer function if not in scene already
-        self.lumbarSpineVolume = slicer.mrmlScene.GetNodesByName("LumbarSpinePhantom_CT").GetItemAsObject(0)
-        if self.lumbarSpineVolume is None:
-            self.lumbarSpineVolume = slicer.util.loadVolume(os.path.join(self.resourcePath, 'Resources\LumbarSpinePhantom_CT.mha'))
-            logic = slicer.modules.volumerendering.logic()
-            slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
-            volumeProp = logic.AddVolumePropertyFromFile(os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
-            self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
-            self.lumbarSpineVolume.SetDisplayVisibility(1)
-            #logic.UpdateDisplayNodeFromVolumeNode(self.lumbarSpineVolume.GetDisplayNode(), self.lumbarSpineVolume)
-
-        #self.lumbarSpineVolume.SetAndObserveTransformNodeID(self.tableTransform.GetID())
-
-        # Add volume into dummy render window
+        # #Load volume and set transfer function if not in scene already
+        # self.lumbarSpineVolume = slicer.mrmlScene.GetNodesByName("LumbarSpinePhantom_CT").GetItemAsObject(0)
+        # if self.lumbarSpineVolume is None:
+        #     self.lumbarSpineVolume = slicer.util.loadVolume(os.path.join(self.resourcePath, 'Resources\LumbarSpinePhantom_CT.mha'))
+        #     logic = slicer.modules.volumerendering.logic()
+        #     slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
+        #     volumeProp = logic.AddVolumePropertyFromFile(os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
+        #     self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
+        #     self.lumbarSpineVolume.SetDisplayVisibility(1)
+        #     #logic.UpdateDisplayNodeFromVolumeNode(self.lumbarSpineVolume.GetDisplayNode(), self.lumbarSpineVolume)
+        #
+        # #self.lumbarSpineVolume.SetAndObserveTransformNodeID(self.tableTransform.GetID())
+        #
+        # # Add volume into dummy render window
         self.renderer.AddVolume(self.slicerRenderer.GetVolumes().GetItemAsObject(0))
         self.slicerRenderer.ResetCamera()
         self.slicerRenderer.Render()
@@ -673,7 +678,6 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.renderer.SetBackground(1, 1, 1)
         self.renderWindow.Render()
 
-        # Initialize Window To Image Pipeline
         self.winToImage = vtk.vtkWindowToImageFilter()
         self.winToImage.SetInput(self.renderWindow)
         self.winToImage.Update()
@@ -694,7 +698,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.planeModelNode.CreateDefaultStorageNode()
         self.planeModelNode.SetAndObservePolyData(self.plane.GetOutput())
 
-        self.planeModelNode.SetAndObserveTransformNodeID(self.dRRToMonitorTransform.GetID())
+        self.planeModelNode.SetAndObserveTransformNodeID(self.scene.dRRToMonitorTransform.GetID())
         self.planeModelDisplay = self.planeModelNode.GetDisplayNode()
         self.planeModelDisplay.SetTextureImageDataConnection(self.winToImage.GetOutputPort())
         self.planeModelDisplay.VisibilityOn()
@@ -707,6 +711,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
 
     def UpdateDRR(self):
         # Position Dummy Renderer Camera
+        # TO DO: Read in Hardcoded values from Config
+        # OR calculate them based on radius of C STL etc...
         self.cameraTransform.Identity()
         self.cameraTransform.PostMultiply()
         #self.cameraTransform.Translate(0, -250 + self.zoomFactor * 4, 0)
@@ -757,7 +763,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.cRotation.Translate(-1262.2704, -337.5527, 5.7)
         self.cRotation.RotateZ(value)
         self.cRotation.Translate(1262.2704, 337.5527, -5.7)
-        self.cTransform.SetMatrixTransformToParent(self.cRotation.GetMatrix())
+        self.scene.cTransform.SetMatrixTransformToParent(self.cRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
@@ -767,7 +773,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.xRotationValue = value
         self.gantryRotation.Identity()
         self.gantryRotation.RotateX(value)
-        self.gantryTransform.SetMatrixTransformToParent(self.gantryRotation.GetMatrix())
+        self.scene.gantryTransform.SetMatrixTransformToParent(self.gantryRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
@@ -775,7 +781,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.yRotationValue = value
         self.wagRotation.Identity()
         self.wagRotation.RotateY(value)
-        self.wagTransform.SetMatrixTransformToParent(self.wagRotation.GetMatrix())
+        self.scene.wagTransform.SetMatrixTransformToParent(self.wagRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
@@ -783,7 +789,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.tableTranslationValue = value
         self.tableTranslationTransform.Identity()
         self.tableTranslationTransform.Translate(0,4*self.tableTranslationValue,0)
-        self.tableZTranslation.SetMatrixTransformToParent(self.tableTranslationTransform.GetMatrix())
+        self.scene.tableZTranslation.SetMatrixTransformToParent(self.tableTranslationTransform.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
 
@@ -796,47 +802,9 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def cleanup(self):
         if self.planeModelNode is not None:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
-        if self.cModel is not None:
-            slicer.mrmlScene.RemoveNode(self.cModel)
-        if self.gantryModel is not None:
-            slicer.mrmlScene.RemoveNode(self.gantryModel)
-        if self.supportModel is not None:
-            slicer.mrmlScene.RemoveNode(self.supportModel)
-        if self.fluoroDisplayModel is not None:
-            slicer.mrmlScene.RemoveNode(self.fluoroDisplayModel)
-        if self.floorModel is not None:
-            slicer.mrmlScene.RemoveNode(self.floorModel)
-        if self.tableModel is not None:
-            slicer.mrmlScene.RemoveNode(self.tableModel)
-        if self.spinePlateModel is not None:
-            slicer.mrmlScene.RemoveNode(self.spinePlateModel)
 
-        # Transforms
-        if self.cTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.cTransform)
-        if self.gantryTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.gantryTransform)
-        if self.fluoroDisplayTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.fluoroDisplayTransform)
-        if self.dRRToMonitorTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.dRRToMonitorTransform)
-        if self.spinePlateTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.spinePlateTransform)
-        if self.floorTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.floorTransform)
-        if self.tableZTranslation is not None:
-            slicer.mrmlScene.RemoveNode(self.tableZTranslation)
-        if self.wagTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.wagTransform)
-        if self.tableTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.tableTransform)
-        if self.sceneTransform is not None:
-            slicer.mrmlScene.RemoveNode(self.sceneTransform)
 
-        if self.lumbarSpineVolume is not None:
-            slicer.mrmlScene.RemoveNode(self.lumbarSpineVolume)
 
-        print("Cleaning...")
 
 class CarmSimulatorTest(ScriptedLoadableModuleTest):
     """
