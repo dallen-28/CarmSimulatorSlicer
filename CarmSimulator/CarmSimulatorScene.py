@@ -169,3 +169,18 @@ class CarmSimulatorScene:
                 os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
             self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
             self.lumbarSpineVolume.SetDisplayVisibility(1)
+
+    def loadScoliosisCT(self):
+        # Load Scoliosis volume and set transfer function
+        try:
+            self.lumbarSpineVolume = slicer.util.getNode("LumbarSpineScoliosis_CT")
+        except:
+            self.lumbarSpineVolume = slicer.util.loadVolume(
+                os.path.join(self.resourcePath, 'Resources\LumbarSpineScoliosis_CT.mha'))
+            logic = slicer.modules.volumerendering.logic()
+            slicer.modules.volumerendering.logic().CreateDefaultVolumeRenderingNodes(self.lumbarSpineVolume)
+            volumeProp = logic.AddVolumePropertyFromFile(
+                os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
+            self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
+            self.lumbarSpineVolume.SetDisplayVisibility(1)
+
