@@ -4,6 +4,7 @@ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
 import copy
+import datetime
 from CarmSimulatorScene import CarmSimulatorScene
 #import CarmSimulatorScene
 
@@ -85,6 +86,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
                     self.logic.ToggleDRR(True)
                     self.logic.UpdateDRR()
                     self.logic.ToggleDRR(False)
+                    self.logic.numShots += 1
                 elif device == 2:
                     self.logic.CollectImage(True)
             return
@@ -357,15 +359,15 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
     def onStartModuleButtonClicked(self, value):
         self.toggleDRRButton.setChecked(False)
-        self.zoomSlider.value = 50
-        self.fieldOfViewSlider.value = 20
+        self.zoomSlider.value = 27
+        self.fieldOfViewSlider.value = 46
         self.xRotationSliderWidget.value = 0
         self.zRotationSliderWidget.value = 0
         self.wagRotationSliderWidget = 0
         self.tableSliderWidget = 0
         self.logic.StartModule(value)
         self.toggleDRRButton.setChecked(True)
-        self.toggleDRRButton.setChecked(False)
+        #self.toggleDRRButton.setChecked(False)
 
     def onNeedleValuesChanged(self, value):
         self.logic.UpdateNeedle(value)
@@ -466,8 +468,6 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         # Initialize DRR Model
         self.planeModelNode = None
 
-
-
     def GenerateScene(self, value):
 
         self.scene.GenerateScene()
@@ -548,9 +548,9 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
 
         # Add DRR Image to Scene using vtkPlaneSource
         self.plane = vtk.vtkPlaneSource()
-        self.texture = vtk.vtkTexture()
-        self.texture.SetInputConnection(self.winToImage.GetOutputPort())
-        self.texture.Update()
+        #self.texture = vtk.vtkTexture()
+        #self.texture.SetInputConnection(self.winToImage.GetOutputPort())
+        #self.texture.Update()
         self.plane.SetPoint1(0, 530, 0)
         self.plane.SetPoint2(335, 0, 0)
         self.plane.SetOrigin(0, 0, 0)
@@ -572,6 +572,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
 
         self.renderWindow.Render()
         self.slicerRenderer.Render()
+
 
     def UpdateDRR(self):
         # Position Dummy Renderer Camera
@@ -669,9 +670,54 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.scene.loadScoliosisCT()
         self.volume = self.slicerRenderer.GetVolumes().GetItemAsObject(0)
         self.renderer.AddVolume(self.volume)
+        self.renderer.Render()
+
+        self.imagesRemaining = ["Left Scotty Dog", "Full Lateral", "Full AP",
+                                "Left Scotty Dog", "Full Lateral", "Full AP",
+                                "Left Scotty Dog", "Full Lateral", "Full AP"]
+
+        self.currentImageLabel = self.imagesRemaining.pop()
+        self.scene.CreateImageLabelModel(200,500)
+
+        self.numShots = 0
+        self.moduleTimer = qt.QElapsedTimer()
+        self.moduleTimer.start()
+
+        self.slicerRenderer.Render()
+
+        # Create Training File
+        self.resultsFileName = os.path.join(self.resourcePath, 'Resources\Temp.csv')
+        self.resultsFile = open(self.resultsFileName, 'w')
+        createdDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        self.resultsFile.write(createdDate + "\n")
+        self.resultsFile.write("C,Gantry,Wag,Table\n")
+        self.resultsFile.close()
+
+
 
     def CollectImage(self, value):
-        print("TEST2")
+
+        self.resultsFile = open(self.resultsFileName, 'a')
+        line = str(self.zRotationValue) + str(self.xRotationValue) + str(self.yRotationValue) + str(self.tableTranslationValue) + "\n"
+        self.resultsFile.writelines(line)
+        self.resultsFile.close()
+
+
+        if self.imagesRemaining.__len__() == 0:
+            self.scene.UpdateImageLabelModel("Module Complete")
+            self.slicerRenderer.Render()
+            self.resultsFile = open(self.resultsFileName, 'a')
+            line = str("Number of shots: ") + str(self.numShots) + "\n"
+            self.resultsFile.writelines(line)
+            line = str("Total Time(ms): ") + str(self.moduleTimer.elapsed()) + "\n"
+            self.resultsFile.writelines(line)
+            self.resultsFile.close()
+            return
+
+        self.currentImageLabel = self.imagesRemaining.pop()
+        self.scene.UpdateImageLabelModel(self.currentImageLabel)
+        self.slicerRenderer.Render()
+
 
     def cleanup(self):
         if self.planeModelNode is not None:

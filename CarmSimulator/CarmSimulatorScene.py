@@ -157,6 +157,7 @@ class CarmSimulatorScene:
         self.surfaceMesh.SetAndObserveTransformNodeID(self.surfaceMeshTransform.GetID())
         self.tableModel.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
 
+
         # Load volume and set transfer function if not in scene already
         try:
             self.lumbarSpineVolume = slicer.util.getNode("LumbarSpinePhantom_CT")
@@ -169,6 +170,8 @@ class CarmSimulatorScene:
                 os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
             self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
             self.lumbarSpineVolume.SetDisplayVisibility(1)
+
+        self.CreatePlaneModel(1000,750)
 
     def loadScoliosisCT(self):
         # Load Scoliosis volume and set transfer function
@@ -183,4 +186,73 @@ class CarmSimulatorScene:
                 os.path.join(self.resourcePath, 'Resources\VolumeProperty.vp'))
             self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
             self.lumbarSpineVolume.SetDisplayVisibility(1)
+
+    def CreatePlaneModel(self, width, height):
+        # Create Instruction Transform Node if not in scene already
+        try:
+            self.instructionTransform = slicer.util.getNode("InstructionTransform")
+        except:
+            self.instructionTransform = slicer.util.loadTransform(
+                os.path.join(self.resourcePath, 'Resources/InstructionTransform.h5'))
+
+
+        # Create Instruction Model Node if not in scene already
+        try:
+            self.instructionModelNode = slicer.util.getNode("InstructionModel")
+        except:
+            self.imagePlane = vtk.vtkPlaneSource()
+            self.imagePlane.SetPoint1(0, height, 0)
+            self.imagePlane.SetPoint2(width, 0, 0)
+            self.imagePlane.SetOrigin(0, 0, 0)
+            self.imagePlane.Update()
+            self.pngReader = vtk.vtkPNGReader()
+            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Instructions.png'))
+            self.pngReader.Update()
+            self.instructionModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
+            self.instructionModelNode.SetName("InstructionModel")
+            self.instructionModelNode.CreateDefaultDisplayNodes()
+            self.instructionModelNode.SetAndObservePolyData(self.imagePlane.GetOutput())
+            self.instructionModelNode.SetAndObserveTransformNodeID(self.instructionTransform.GetID())
+            self.instructionModelDisplay = self.instructionModelNode.GetDisplayNode()
+            self.instructionModelDisplay.SetTextureImageDataConnection(self.pngReader.GetOutputPort())
+            self.instructionModelDisplay.VisibilityOn()
+            self.instructionModelDisplay.SetFrontfaceCulling(False)
+            self.instructionModelDisplay.SetBackfaceCulling(False)
+
+    def CreateImageLabelModel(self, width, height):
+        # Create Image Label Transform if not in scene already
+        try:
+            self.imageLabelTransform = slicer.util.getNode("ImageLabelTransform")
+        except:
+            self.imageLabelTransform = slicer.util.loadTransform(
+                os.path.join(self.resourcePath, 'Resources/ImageLabelTransform.h5'))
+
+        # Create Instruction Model Node if not in scene already
+        try:
+            self.imageLabelModelNode = slicer.util.getNode("ImageLabelModel")
+        except:
+            self.imageLabelPlane = vtk.vtkPlaneSource()
+            self.imageLabelPlane.SetPoint1(0, height, 0)
+            self.imageLabelPlane.SetPoint2(width, 0, 0)
+            self.imageLabelPlane.SetOrigin(0, 0, 0)
+            self.imageLabelPlane.Update()
+            self.pngImageReader = vtk.vtkPNGReader()
+            self.pngImageReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Full AP.png'))
+            self.pngImageReader.Update()
+            self.imageLabelModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
+            self.imageLabelModelNode.SetName("ImageLabelModel")
+            self.imageLabelModelNode.CreateDefaultDisplayNodes()
+            self.imageLabelModelNode.SetAndObservePolyData(self.imagePlane.GetOutput())
+            self.imageLabelModelNode.SetAndObserveTransformNodeID(self.imageLabelTransform.GetID())
+            self.imageLabelModelDisplay = self.imageLabelModelNode.GetDisplayNode()
+            self.imageLabelModelDisplay.SetTextureImageDataConnection(self.pngImageReader.GetOutputPort())
+            self.imageLabelModelDisplay.VisibilityOn()
+            self.imageLabelModelDisplay.SetFrontfaceCulling(False)
+            self.imageLabelModelDisplay.SetBackfaceCulling(False)
+
+    def UpdateImageLabelModel(self, label):
+        # Update Image Label Via pngReader
+        filename = "Resources/" + label + ".png"
+        self.pngImageReader.SetFileName(os.path.join(self.resourcePath, filename))
+        self.pngImageReader.Update()
 
