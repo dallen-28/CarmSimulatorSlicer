@@ -666,7 +666,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.DRRInitialized = False
         self.toggleDRR = False
         self.renderer.RemoveVolume(self.volume)
-        slicer.mrmlScene.RemoveNode(self.scene.lumbarSpineVolume)
+        #slicer.mrmlScene.RemoveNode(self.scene.lumbarSpineVolume)
         self.scene.loadScoliosisCT()
         self.volume = self.slicerRenderer.GetVolumes().GetItemAsObject(0)
         self.renderer.AddVolume(self.volume)
@@ -698,7 +698,10 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def CollectImage(self, value):
 
         self.resultsFile = open(self.resultsFileName, 'a')
-        line = str(self.zRotationValue) + str(self.xRotationValue) + str(self.yRotationValue) + str(self.tableTranslationValue) + "\n"
+        line = str(self.zRotationValue) + "," + \
+               str(self.xRotationValue) + "," + \
+               str(self.yRotationValue) + "," + \
+               str(self.tableTranslationValue) + "\n"
         self.resultsFile.writelines(line)
         self.resultsFile.close()
 
