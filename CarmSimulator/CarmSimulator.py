@@ -79,19 +79,16 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         #print("Action") # 2.0 for pressed 3.0 for released
         #print(action)
 
+        if input == 4:
+            if action == 3:
+                self.logic.CollectImage(True)
+            return
+
         # Do Nothing unless we receive a release event from the trigger
         if input == 0:
             if action == 3:
-                if device == 1:
-                    self.logic.ToggleDRR(True)
-                    self.logic.UpdateDRR()
-                    self.logic.ToggleDRR(False)
-                    self.logic.numShots += 1
-                elif device == 2:
-                    self.logic.CollectImage(True)
+               self.onShootFluoroButtonClicked(True)
             return
-
-
         if trackpadPositionX == 0:
             self.direction = 0
             return
@@ -125,28 +122,28 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         #if self.movement:
         #print(direction)
         if self.direction == 1:
-            self.xRotationSliderWidget.value += 1
+            self.xRotationSliderWidget.value -= 0.5
             self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
         elif self.direction == 2:
-            self.xRotationSliderWidget.value -= 1
+            self.xRotationSliderWidget.value += 0.5
             self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
         elif self.direction == 3:
-            self.zRotationSliderWidget.value += 1
+            self.zRotationSliderWidget.value -= 0.5
             self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
         elif self.direction == 4:
-            self.zRotationSliderWidget.value -= 1
+            self.zRotationSliderWidget.value += 0.5
             self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
         elif self.direction == 5:
-            self.wagRotationSliderWidget.value += 1
+            self.wagRotationSliderWidget.value += 0.1
             self.logic.UpdateWagRotation(self.wagRotationSliderWidget.value)
         elif self.direction == 6:
-            self.wagRotationSliderWidget.value -= 1
+            self.wagRotationSliderWidget.value -= 0.1
             self.logic.UpdateWagRotation(self.wagRotationSliderWidget.value)
         elif self.direction == 7:
-            self.tableSliderWidget.value += 1
+            self.tableSliderWidget.value += 0.5
             self.logic.UpdateTable(self.tableSliderWidget.value)
         elif self.direction == 8:
-            self.tableSliderWidget.value -= 1
+            self.tableSliderWidget.value -= 0.5
             self.logic.UpdateTable(self.tableSliderWidget.value)
 
 
@@ -248,21 +245,15 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.startModuleButton.connect('clicked(bool)', self.onStartModuleButtonClicked)
         parametersFormLayout.addRow(self.startModuleButton)
 
+        # Collect Image Button
         self.collectImageButton = qt.QPushButton('Collect Image')
-        # Generate Scene Button
         self.collectImageButton.connect('clicked(bool)', self.onCollectImageButtonClicked)
-        # self.generateSceneButton.setDisabled(True)
         parametersFormLayout.addRow(self.collectImageButton)
 
-        # Needle Slider
-        #self.needleSliderWidget = ctk.ctkSliderWidget()
-        #self.needleSliderWidget.singleStep = 0.1
-        #self.needleSliderWidget.minimum = -55
-        #self.needleSliderWidget.maximum = 55
-        #self.needleSliderWidget.value = 0.0
-        #self.needleSliderWidget.setToolTip("Needle Translation.")
-        #self.needleSliderWidget.connect('valueChanged(double)', self.onNeedleValuesChanged)
-        #parametersFormLayout.addRow("Needle Translation", self.needleSliderWidget)
+        # Shoot Fluoro Button
+        self.shootFluoroButton = qt.QPushButton('ShootFluoro')
+        self.shootFluoroButton.connect('clicked(bool)', self.onShootFluoroButtonClicked)
+        parametersFormLayout.addRow(self.shootFluoroButton)
 
         # Create Logic Instance
         self.logic = CarmSimulatorLogic()
@@ -320,6 +311,16 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
     def onToggleDRRButtonClicked(self, value):
         self.logic.ToggleDRR(value)
+
+    def onShootFluoroButtonClicked(self, value):
+
+        if self.logic.toggleDRR == True:
+            return
+
+        self.logic.ToggleDRR(True)
+        self.logic.UpdateDRR()
+        self.logic.ToggleDRR(False)
+        self.logic.numShots += 1
 
     def onToggleVRButtonClicked(self, value):
 
