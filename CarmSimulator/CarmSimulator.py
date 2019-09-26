@@ -206,7 +206,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         # C Rotation
         self.xRotationSliderWidget = ctk.ctkSliderWidget()
-        self.xRotationSliderWidget.singleStep = 0.1
+        self.xRotationSliderWidget.singleStep = 0.01
         self.xRotationSliderWidget.minimum = -15
         self.xRotationSliderWidget.maximum = 90
         self.xRotationSliderWidget.value = 0.0
@@ -216,7 +216,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         # Gantry Rotation
         self.zRotationSliderWidget = ctk.ctkSliderWidget()
-        self.zRotationSliderWidget.singleStep = 0.1
+        self.zRotationSliderWidget.singleStep = 0.01
         self.zRotationSliderWidget.minimum = -55
         self.zRotationSliderWidget.maximum = 55
         self.zRotationSliderWidget.value = 0.0
@@ -226,7 +226,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         # Wag Rotation
         self.wagRotationSliderWidget = ctk.ctkSliderWidget()
-        self.wagRotationSliderWidget.singleStep = 0.1
+        self.wagRotationSliderWidget.singleStep = 0.005
         self.wagRotationSliderWidget.minimum = -40
         self.wagRotationSliderWidget.maximum = 40
         self.wagRotationSliderWidget.value = 0.0
@@ -235,7 +235,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         parametersFormLayout.addRow("Wag Rotation", self.wagRotationSliderWidget)
 
         self.tableSliderWidget = ctk.ctkSliderWidget()
-        self.tableSliderWidget.singleStep = 0.1
+        self.tableSliderWidget.singleStep = 0.05
         self.tableSliderWidget.minimum = -55
         self.tableSliderWidget.maximum = 55
         self.tableSliderWidget.value = 0.0
@@ -363,8 +363,8 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.fieldOfViewSlider.value = 46
         self.xRotationSliderWidget.value = 0
         self.zRotationSliderWidget.value = 0
-        self.wagRotationSliderWidget = 0
-        self.tableSliderWidget = 0
+        self.wagRotationSliderWidget.value = 0
+        self.tableSliderWidget.value = 0
         self.logic.StartModule(value)
         self.toggleDRRButton.setChecked(True)
         #self.toggleDRRButton.setChecked(False)
@@ -666,7 +666,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.DRRInitialized = False
         self.toggleDRR = False
         self.renderer.RemoveVolume(self.volume)
-        #slicer.mrmlScene.RemoveNode(self.scene.lumbarSpineVolume)
+        slicer.mrmlScene.RemoveNode(self.scene.lumbarSpineVolume)
         self.scene.loadScoliosisCT()
         self.volume = self.slicerRenderer.GetVolumes().GetItemAsObject(0)
         self.renderer.AddVolume(self.volume)

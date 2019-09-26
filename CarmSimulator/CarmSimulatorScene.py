@@ -138,6 +138,7 @@ class CarmSimulatorScene:
             self.wagTransform = slicer.util.loadTransform(
                 os.path.join(self.resourcePath, 'Resources/WagTransform.h5'))
 
+
         # Set up transform hierarchy
         self.cTransform.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
         self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
@@ -171,7 +172,7 @@ class CarmSimulatorScene:
             self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
             self.lumbarSpineVolume.SetDisplayVisibility(1)
 
-        self.CreatePlaneModel(1000,750)
+        self.CreatePlaneModel(1000,1000)
 
     def loadScoliosisCT(self):
         # Load Scoliosis volume and set transfer function
@@ -194,6 +195,7 @@ class CarmSimulatorScene:
         except:
             self.instructionTransform = slicer.util.loadTransform(
                 os.path.join(self.resourcePath, 'Resources/InstructionTransform.h5'))
+            self.instructionTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
 
 
         # Create Instruction Model Node if not in scene already
@@ -226,6 +228,7 @@ class CarmSimulatorScene:
         except:
             self.imageLabelTransform = slicer.util.loadTransform(
                 os.path.join(self.resourcePath, 'Resources/ImageLabelTransform.h5'))
+            self.imageLabelTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
 
         # Create Instruction Model Node if not in scene already
         try:
