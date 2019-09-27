@@ -205,7 +205,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.xRotationSliderWidget = ctk.ctkSliderWidget()
         self.xRotationSliderWidget.singleStep = 0.01
         self.xRotationSliderWidget.minimum = -15
-        self.xRotationSliderWidget.maximum = 90
+        self.xRotationSliderWidget.maximum = 100
         self.xRotationSliderWidget.value = 0.0
         self.xRotationSliderWidget.setToolTip("C Rotation about the Z axis.")
         self.xRotationSliderWidget.connect('valueChanged(double)', self.onCRotationValuesChanged)
@@ -224,8 +224,8 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         # Wag Rotation
         self.wagRotationSliderWidget = ctk.ctkSliderWidget()
         self.wagRotationSliderWidget.singleStep = 0.005
-        self.wagRotationSliderWidget.minimum = -40
-        self.wagRotationSliderWidget.maximum = 40
+        self.wagRotationSliderWidget.minimum = -20
+        self.wagRotationSliderWidget.maximum = 20
         self.wagRotationSliderWidget.value = 0.0
         self.wagRotationSliderWidget.setToolTip("Wag Rotation about the Y axis.")
         self.wagRotationSliderWidget.connect('valueChanged(double)', self.onWagRotationValuesChanged)
