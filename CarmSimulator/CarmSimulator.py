@@ -205,7 +205,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.xRotationSliderWidget = ctk.ctkSliderWidget()
         self.xRotationSliderWidget.singleStep = 0.01
         self.xRotationSliderWidget.minimum = -15
-        self.xRotationSliderWidget.maximum = 90
+        self.xRotationSliderWidget.maximum = 100
         self.xRotationSliderWidget.value = 0.0
         self.xRotationSliderWidget.setToolTip("C Rotation about the Z axis.")
         self.xRotationSliderWidget.connect('valueChanged(double)', self.onCRotationValuesChanged)
@@ -233,8 +233,8 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
 
         self.tableSliderWidget = ctk.ctkSliderWidget()
         self.tableSliderWidget.singleStep = 0.05
-        self.tableSliderWidget.minimum = -55
-        self.tableSliderWidget.maximum = 55
+        self.tableSliderWidget.minimum = -155
+        self.tableSliderWidget.maximum = 155
         self.tableSliderWidget.value = 0.0
         self.tableSliderWidget.setToolTip("Table Translation.")
         self.tableSliderWidget.connect('valueChanged(double)', self.onTableValuesChanged)
@@ -586,18 +586,20 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.cameraTransform.RotateZ(-self.zRotationValue)
         self.cameraTransform.RotateX(self.xRotationValue)
 
-        self.cameraTransform.Translate(1262.2704, 0, 0)
-        # #self.cameraTransform.Translate(-1262.2704, -337.5527, 5.7)
+        #self.cameraTransform.Translate(500.2704, 0, 0)
+        #self.cameraTransform.Translate(-1262.2704, -337.5527, 5.7)
+        self.cameraTransform.Translate(500, 0, 0)
         self.cameraTransform.RotateY(-self.yRotationValue)
+        self.cameraTransform.Translate(-500, 0, 0)
         #self.cameraTransform.Translate(-200, 0, 0)
-        self.cameraTransform.Translate(-1262.2704,0,-self.tableTranslationValue)
-        # #self.cameraTransform.Translate(1262.2704, 337.5527, -5.7)
+        #self.cameraTransform.Translate(-500.2704,0,-self.tableTranslationValue)
+        #self.cameraTransform.Translate(1262.2704, 337.5527, -5.7)
 
 
         self.focalPointTransform.Identity()
-        self.focalPointTransform.Translate(1262.2704, 0, 0)
+        self.focalPointTransform.Translate(500, 0, 0)
         self.focalPointTransform.RotateY(self.yRotationValue)
-        self.focalPointTransform.Translate(-1262.2704, 0, 0)
+        self.focalPointTransform.Translate(-500, 0, 0)
         self.focalPointTransform.Translate(0,0,-self.tableTranslationValue)
         zAxis = [0,0,0,0]
         #up = [0,0,1,0]
@@ -646,7 +648,9 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def UpdateWagRotation(self, value):
         self.yRotationValue = value
         self.wagRotation.Identity()
+        self.wagRotation.Translate(500,0,0)
         self.wagRotation.RotateY(value)
+        self.wagRotation.Translate(-500,0, 0)
         self.scene.wagTransform.SetMatrixTransformToParent(self.wagRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
