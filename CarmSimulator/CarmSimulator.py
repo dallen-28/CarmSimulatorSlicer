@@ -730,8 +730,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def cleanup(self):
         if self.planeModelNode is not None:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
-        if self.scene.imageLabelModelNode is not None:
-            slicer.mrmlScene.RemoveNode(self.scene.imageLabelModelNode)
+        #if self.scene.imageLabelModelNode is not None:
+        #    slicer.mrmlScene.RemoveNode(self.scene.imageLabelModelNode)
 
 
 
