@@ -682,7 +682,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
                                 "Left Scotty Dog", "Full Lateral", "Full AP"]
 
         self.currentImageLabel = self.imagesRemaining.pop()
-        self.scene.CreateImageLabelModel(200,500)
+        self.scene.CreateImageLabelModel(520,620)
 
         self.numShots = 0
         self.moduleTimer = qt.QElapsedTimer()
@@ -730,6 +730,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def cleanup(self):
         if self.planeModelNode is not None:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
+        if self.scene.imageLabelModelNode is not None:
+            slicer.mrmlScene.RemoveNode(self.scene.imageLabelModelNode)
 
 
 

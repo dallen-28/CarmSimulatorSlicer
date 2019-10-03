@@ -23,6 +23,8 @@ class CarmSimulatorScene:
         self.sceneTransform = None
         self.lumbarSpineVolume = None
 
+        self.imageLabelModelNode = None
+
         # self.fovPath = os.path.join(self.resourcePath, 'Resources\FieldOfViewMedium.png')
 
     def GenerateScene(self):
@@ -172,7 +174,8 @@ class CarmSimulatorScene:
             self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
             self.lumbarSpineVolume.SetDisplayVisibility(1)
 
-        self.CreatePlaneModel(1000,1000)
+        self.CreatePlaneModel(678,1920)
+        #self.CreatePlaneModel(200,1000)
 
     def loadScoliosisCT(self):
         # Load Scoliosis volume and set transfer function
@@ -208,7 +211,7 @@ class CarmSimulatorScene:
             self.imagePlane.SetOrigin(0, 0, 0)
             self.imagePlane.Update()
             self.pngReader = vtk.vtkPNGReader()
-            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Instructions.png'))
+            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Instructions2.png'))
             self.pngReader.Update()
             self.instructionModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
             self.instructionModelNode.SetName("InstructionModel")
@@ -229,6 +232,10 @@ class CarmSimulatorScene:
             self.imageLabelTransform = slicer.util.loadTransform(
                 os.path.join(self.resourcePath, 'Resources/ImageLabelTransform.h5'))
             self.imageLabelTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
+            # Create Backup so we can move red border back to there
+            self.imageLabelMatrix = vtk.vtkMatrix4x4()
+            self.imageLabelTransform.GetMatrixTransformToParent(self.imageLabelMatrix)
+            self.imageLabelTransformBackup = self.imageLabelTransform
 
         # Create Instruction Model Node if not in scene already
         try:
@@ -240,12 +247,12 @@ class CarmSimulatorScene:
             self.imageLabelPlane.SetOrigin(0, 0, 0)
             self.imageLabelPlane.Update()
             self.pngImageReader = vtk.vtkPNGReader()
-            self.pngImageReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Full AP.png'))
+            self.pngImageReader.SetFileName(os.path.join(self.resourcePath, 'Resources/RedBorderTrans.png'))
             self.pngImageReader.Update()
             self.imageLabelModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
             self.imageLabelModelNode.SetName("ImageLabelModel")
             self.imageLabelModelNode.CreateDefaultDisplayNodes()
-            self.imageLabelModelNode.SetAndObservePolyData(self.imagePlane.GetOutput())
+            self.imageLabelModelNode.SetAndObservePolyData(self.imageLabelPlane.GetOutput())
             self.imageLabelModelNode.SetAndObserveTransformNodeID(self.imageLabelTransform.GetID())
             self.imageLabelModelDisplay = self.imageLabelModelNode.GetDisplayNode()
             self.imageLabelModelDisplay.SetTextureImageDataConnection(self.pngImageReader.GetOutputPort())
@@ -255,7 +262,22 @@ class CarmSimulatorScene:
 
     def UpdateImageLabelModel(self, label):
         # Update Image Label Via pngReader
-        filename = "Resources/" + label + ".png"
-        self.pngImageReader.SetFileName(os.path.join(self.resourcePath, filename))
-        self.pngImageReader.Update()
+
+        value = 0
+        if label == "Full Lateral":
+            value = 607
+        elif label == "Left Scotty Dog":
+            value = 1214
+        elif label == "Module Complete":
+            self.pngImageReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Module Complete.png'))
+            self.pngImageReader.Update()
+            value = 607
+
+        tran = vtk.vtkTransform()
+        tran.Identity()
+
+        tran.SetMatrix(self.imageLabelMatrix)
+        tran.Translate(0,value,0)
+        self.imageLabelTransform.SetMatrixTransformToParent(tran.GetMatrix())
+
 
