@@ -211,7 +211,8 @@ class CarmSimulatorScene:
             self.imagePlane.SetOrigin(0, 0, 0)
             self.imagePlane.Update()
             self.pngReader = vtk.vtkPNGReader()
-            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Instructions2.png'))
+            #self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Instructions2.png'))
+            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/ThreeViews2.png'))
             self.pngReader.Update()
             self.instructionModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
             self.instructionModelNode.SetName("InstructionModel")
@@ -265,13 +266,13 @@ class CarmSimulatorScene:
 
         value = 0
         if label == "Full Lateral":
-            value = 607
+            value = 640
         elif label == "Left Scotty Dog":
-            value = 1214
+            value = 1280
         elif label == "Module Complete":
             self.pngImageReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Module Complete.png'))
             self.pngImageReader.Update()
-            value = 607
+            value = 640
 
         tran = vtk.vtkTransform()
         tran.Identity()
