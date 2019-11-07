@@ -60,10 +60,10 @@ class CarmSimulatorScene:
         self.fluoroDisplayModel.SetSelectable(False)
 
         try:
-            self.surfaceMesh = slicer.util.getNode("SpineSurfaceMesh")
+            self.surfaceMesh = slicer.util.getNode("HumanMesh")
         except:
             self.surfaceMesh = slicer.util.loadModel(
-                os.path.join(self.resourcePath, 'Resources/SpineSurfaceMesh.stl'))
+                os.path.join(self.resourcePath, 'Resources/HumanMesh.stl'))
             self.surfaceMesh.GetDisplayNode().SetColor(0.7, 0.48, 0.4)
         self.surfaceMesh.SetSelectable(False)
 
