@@ -79,43 +79,11 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         #print("Action") # 2.0 for pressed 3.0 for released
         #print(action)
 
-        if input == 4:
-            if action == 3:
-                self.logic.CollectImage(True)
-            return
 
         # Do Nothing unless we receive a release event from the trigger
-        if input == 0:
-            if action == 3:
+        if input == 0 and action == 3:
                self.onShootFluoroButtonClicked(True)
-            return
-        if trackpadPositionX == 0:
-            self.direction = 0
-            return
 
-        # Set C-arm Movement Direction
-        if device == 1:
-            if trackpadPositionX > 0:
-                if trackpadPositionY > 0:
-                    self.direction = 1
-                else:
-                    self.direction = 2
-            else:
-                if trackpadPositionY > 0:
-                    self.direction = 3
-                else:
-                    self.direction = 4
-        elif device == 2:
-            if trackpadPositionX > 0:
-                if trackpadPositionY > 0:
-                    self.direction = 5
-                else:
-                    self.direction = 6
-            else:
-                if trackpadPositionY > 0:
-                    self.direction = 7
-                else:
-                    self.direction = 8
 
 
     def processOneThing(self):
@@ -359,6 +327,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.CollectImage(value)
 
     def onStartModuleButtonClicked(self, value):
+        self.logic.StartModule(value)
         self.toggleDRRButton.setChecked(False)
         self.zoomSlider.value = 27
         self.fieldOfViewSlider.value = 46
@@ -366,9 +335,8 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.zRotationSliderWidget.value = 0
         self.wagRotationSliderWidget.value = 0
         self.tableSliderWidget.value = 0
-        self.logic.StartModule(value)
-        self.toggleDRRButton.setChecked(True)
-        #self.toggleDRRButton.setChecked(False)
+        self.logic.UpdateDRR()
+        self.toggleDRRButton.setChecked(False)
 
     def onNeedleValuesChanged(self, value):
         self.logic.UpdateNeedle(value)
@@ -682,7 +650,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
                                 "Left Scotty Dog", "Full Lateral", "Full AP"]
 
         self.currentImageLabel = self.imagesRemaining.pop()
-        self.scene.CreateImageLabelModel(520,620)
+        self.scene.CreateImageLabelModel(610,660)
+        #self.scene.CreateImageLabelModel(1063, 898)
 
         self.numShots = 0
         self.moduleTimer = qt.QElapsedTimer()
@@ -730,8 +699,8 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def cleanup(self):
         if self.planeModelNode is not None:
             slicer.mrmlScene.RemoveNode(self.planeModelNode)
-        #if self.scene.imageLabelModelNode is not None:
-        #    slicer.mrmlScene.RemoveNode(self.scene.imageLabelModelNode)
+        if self.scene.imageLabelModelNode is not None:
+            slicer.mrmlScene.RemoveNode(self.scene.imageLabelModelNode)
 
 
 
