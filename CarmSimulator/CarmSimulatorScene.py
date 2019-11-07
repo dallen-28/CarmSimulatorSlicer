@@ -63,7 +63,7 @@ class CarmSimulatorScene:
             self.surfaceMesh = slicer.util.getNode("HumanMesh")
         except:
             self.surfaceMesh = slicer.util.loadModel(
-                os.path.join(self.resourcePath, 'Resources/HumanMesh.stl'))
+                os.path.join(self.resourcePath, 'Resources/HumanMeshLowPoly2.stl'))
             self.surfaceMesh.GetDisplayNode().SetColor(0.7, 0.48, 0.4)
         self.surfaceMesh.SetSelectable(False)
 
