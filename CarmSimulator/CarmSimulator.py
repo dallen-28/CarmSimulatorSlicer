@@ -49,105 +49,6 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         ScriptedLoadableModuleWidget.__init__(self,parent)
         slicer.mymod = self
 
-
-    @vtk.calldata_type(vtk.VTK_INT)
-    def updateTransforms(self, caller, event, calldata):
-        if calldata == 1:
-            self.xRotationSliderWidget.value += 1
-            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
-        elif calldata == 2:
-            self.xRotationSliderWidget.value -= 1
-            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
-        elif calldata == 3:
-            self.zRotationSliderWidget.value += 1
-            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
-        elif calldata == 4:
-            self.zRotationSliderWidget.value -= 1
-            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
-
-    @vtk.calldata_type(vtk.VTK_OBJECT)
-    def interactorCallback(self, caller, event, calldata):
-        matr = calldata
-        #print(matr)
-        trackpadPositionX = matr.GetElement(0,0)
-        trackpadPositionY = matr.GetElement(0,1)
-        device = matr.GetElement(0,2)
-        input = matr.GetElement(0,3)
-        action = matr.GetElement(1,0)
-        #print("Input")  # 0 for trigger 1 for trackpad
-        #print(input)
-        #print("Action") # 2.0 for pressed 3.0 for released
-        #print(action)
-
-        if input == 4:
-            if action == 3:
-                self.logic.CollectImage(True)
-            return
-
-        # Do Nothing unless we receive a release event from the trigger
-        if input == 0:
-            if action == 3:
-               self.onShootFluoroButtonClicked(True)
-            return
-        if trackpadPositionX == 0:
-            self.direction = 0
-            return
-
-        # Set C-arm Movement Direction
-        if device == 1:
-            if trackpadPositionX > 0:
-                if trackpadPositionY > 0:
-                    self.direction = 1
-                else:
-                    self.direction = 2
-            else:
-                if trackpadPositionY > 0:
-                    self.direction = 3
-                else:
-                    self.direction = 4
-        elif device == 2:
-            if trackpadPositionX > 0:
-                if trackpadPositionY > 0:
-                    self.direction = 5
-                else:
-                    self.direction = 6
-            else:
-                if trackpadPositionY > 0:
-                    self.direction = 7
-                else:
-                    self.direction = 8
-
-
-    def processOneThing(self):
-        #if self.movement:
-        #print(direction)
-        if self.direction == 1:
-            self.xRotationSliderWidget.value -= 0.5
-            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
-        elif self.direction == 2:
-            self.xRotationSliderWidget.value += 0.5
-            self.logic.UpdateCRotation(self.xRotationSliderWidget.value)
-        elif self.direction == 3:
-            self.zRotationSliderWidget.value -= 0.5
-            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
-        elif self.direction == 4:
-            self.zRotationSliderWidget.value += 0.5
-            self.logic.UpdateGantryRotation(self.zRotationSliderWidget.value)
-        elif self.direction == 5:
-            self.wagRotationSliderWidget.value += 0.1
-            self.logic.UpdateWagRotation(self.wagRotationSliderWidget.value)
-        elif self.direction == 6:
-            self.wagRotationSliderWidget.value -= 0.1
-            self.logic.UpdateWagRotation(self.wagRotationSliderWidget.value)
-        elif self.direction == 7:
-            self.tableSliderWidget.value += 0.5
-            self.logic.UpdateTable(self.tableSliderWidget.value)
-        elif self.direction == 8:
-            self.tableSliderWidget.value -= 0.5
-            self.logic.UpdateTable(self.tableSliderWidget.value)
-
-
-
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
 
@@ -173,14 +74,6 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.toggleDRRButton.connect('toggled(bool)', self.onToggleDRRButtonClicked)
         parametersFormLayout.addRow("Toggle DRR", self.toggleDRRButton)
 
-        # Toggle VR Button - TO DO
-        self.toggleVRButton = qt.QCheckBox()
-        self.toggleVRButton.connect('toggled(bool)', self.onToggleVRButtonClicked)
-        parametersFormLayout.addRow("Toggle VR", self.toggleVRButton)
-
-        # Transfer Function Presets
-        self.fluoroButton = qt.QRadioButton()
-        # parametersFormLayout.addRow("Fluoro", self.fluoroButton)
 
         # Field of View Slider
         self.fieldOfViewSlider = ctk.ctkSliderWidget()
@@ -261,7 +154,6 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         # Disable All Buttons until generate scene is clicked
         self.toggleDRRButton.setDisabled(True)
         self.fieldOfViewSlider.setDisabled(True)
-        self.toggleVRButton.setDisabled(True)
         self.zoomSlider.setDisabled(True)
         self.xRotationSliderWidget.setDisabled(True)
         self.zRotationSliderWidget.setDisabled(True)
@@ -269,30 +161,6 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.tableSliderWidget.setDisabled(True)
         self.startModuleButton.setDisabled(True)
         self.collectImageButton.setDisabled(True)
-
-        #self.interactorObserver = slicer.modules.virtualReality
-
-        self.vrInteractorObserver = 0
-        self.gestureObserverNum = 0
-        self.vrInteractor = None
-
-        # Grab gesturerecognition logic instance so we can observe for events
-        #self.gestureObserver = slicer.modules.gesturerecognition.logic()
-        #self.useGestureRecognition = True
-        #self.gestureObserverNum = 0
-        #if not self.gestureObserver:
-        #    self.useGestureRecognition = False
-
-        #self.useGestureRecognition = False
-        self.timer = qt.QTimer()
-        self.elapsed = qt.QElapsedTimer()
-        self.timerIteration = 0
-        self.movement = 1
-        self.direction = 0
-        self.timer.connect('timeout()', self.processOneThing)
-        #self.timer.setInterval(30)
-        self.timer.start()
-
 
 
         # Add vertical Spacer
@@ -322,30 +190,12 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.ToggleDRR(False)
         self.logic.numShots += 1
 
-    def onToggleVRButtonClicked(self, value):
-
-        w = None
-        for i in slicer.app.topLevelWidgets():
-            if i.name == "VirtualRealityWidget":
-                w = i
-
-        if w is None:
-            print("Could not connect to VR")
-            return
-
-        self.vrInteractor = w.renderWindow().GetInteractor()
-        self.vrInteractorObserver = self.vrInteractor.AddObserver(123456, self.interactorCallback)
 
     def onGenerateSceneButtonClicked(self, value):
-        #if self.useGestureRecognition == True:
-            #if self.gestureObserverNum != 0:
-                #self.gestureObserver.RemoveObserver(self.gestureObserverNum)
-            #self.gestureObserverNum = self.gestureObserver.AddObserver(self.gestureObserver.GestureRecognizedEvent, self.updateTransforms)
         self.logic.GenerateScene(value)
 
         # Enable Buttons
         self.toggleDRRButton.setDisabled(False)
-        self.toggleVRButton.setDisabled(False)
         self.fieldOfViewSlider.setDisabled(False)
         self.zoomSlider.setDisabled(False)
         self.xRotationSliderWidget.setDisabled(False)
@@ -359,6 +209,8 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.CollectImage(value)
 
     def onStartModuleButtonClicked(self, value):
+
+        self.logic.StartModule(value)
         self.toggleDRRButton.setChecked(False)
         self.zoomSlider.value = 27
         self.fieldOfViewSlider.value = 46
@@ -366,9 +218,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.zRotationSliderWidget.value = 0
         self.wagRotationSliderWidget.value = 0
         self.tableSliderWidget.value = 0
-        self.logic.StartModule(value)
-        self.toggleDRRButton.setChecked(True)
-        #self.toggleDRRButton.setChecked(False)
+        self.logic.UpdateDRR()
 
     def onNeedleValuesChanged(self, value):
         self.logic.UpdateNeedle(value)
@@ -383,17 +233,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.logic.ChangeZoomFactor(value)
 
     def cleanup(self):
-        #if self.gestureObserverNum is not 0:
-        #    self.gestureObserver.RemoveObserver(self.gestureObserverNum)
-
-        if self.vrInteractor is not None:
-            self.vrInteractor.RemoveObserver(self.vrInteractorObserver)
-
-
-        print("HELLO")
-        # Cleanup any memory leaks
         self.logic.cleanup()
-        pass
 
 
 #
@@ -439,18 +279,6 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.renderWindow.SetSize(530, 335)
         # self.ChangeFOV(0)
         self.renderWindow.SetOffScreenRendering(1)
-
-        # Add Needle
-        #self.needle = vtk.vtkCylinderSource()
-        #self.needle.SetRadius(0.5)
-        #self.needle.SetHeight(100)
-        #self.needleMapper = vtk.vtkPolyDataMapper()
-        #self.needleMapper.SetInputConnection(self.needle.GetOutputPort())
-        #self.needleMapper.Update()
-        #self.needleActor = vtk.vtkActor()
-        #self.needleActor.SetMapper(self.needleMapper)
-        #self.needleActor.GetProperty().SetColor(0.3, 0.3, 0.3)
-        #self.renderer.AddActor(self.needleActor)
 
         # Initialize Carm Transforms
         self.cRotation = vtk.vtkTransform()
@@ -676,6 +504,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.volume = self.slicerRenderer.GetVolumes().GetItemAsObject(0)
         self.renderer.AddVolume(self.volume)
         self.renderer.Render()
+        #self.UpdateDRR()
 
         self.imagesRemaining = ["Left Scotty Dog", "Full Lateral", "Full AP",
                                 "Left Scotty Dog", "Full Lateral", "Full AP",
