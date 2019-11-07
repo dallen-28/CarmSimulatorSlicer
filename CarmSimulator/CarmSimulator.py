@@ -692,7 +692,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.slicerRenderer.Render()
 
         # Create Training File
-        self.resultsFileName = os.path.join(self.resourcePath, 'Resources\Temp.csv')
+        self.resultsFileName = os.path.join(self.resourcePath, 'Resources\Temp.csv') # Test
         self.resultsFile = open(self.resultsFileName, 'w')
         createdDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         self.resultsFile.write(createdDate + "\n")
