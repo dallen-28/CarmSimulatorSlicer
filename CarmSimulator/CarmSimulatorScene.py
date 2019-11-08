@@ -38,6 +38,13 @@ class CarmSimulatorScene:
         self.cModel.SetSelectable(False)
 
         try:
+            self.coordinateModel = slicer.util.getNode("CoordinateModel")
+        except:
+            self.coordinateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/CoordinateModel.stl'))
+            self.coordinateModel.GetDisplayNode().SetColor(1,0,0)
+        self.coordinateModel.SetSelectable(False)
+
+        try:
             self.gantryModel = slicer.util.getNode("GantryV3")
         except:
             self.gantryModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/GantryV3.stl'))
@@ -63,7 +70,7 @@ class CarmSimulatorScene:
             self.surfaceMesh = slicer.util.getNode("HumanMesh")
         except:
             self.surfaceMesh = slicer.util.loadModel(
-                os.path.join(self.resourcePath, 'Resources/HumanMeshLowPoly2.stl'))
+                os.path.join(self.resourcePath, 'Resources/HumanMesh2.stl'))
             self.surfaceMesh.GetDisplayNode().SetColor(0.7, 0.48, 0.4)
         self.surfaceMesh.SetSelectable(False)
 
@@ -212,7 +219,7 @@ class CarmSimulatorScene:
             self.imagePlane.Update()
             self.pngReader = vtk.vtkPNGReader()
             #self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/Instructions2.png'))
-            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/ThreeViews2.png'))
+            self.pngReader.SetFileName(os.path.join(self.resourcePath, 'Resources/ThreeViews3.png'))
             self.pngReader.Update()
             self.instructionModelNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLModelNode')
             self.instructionModelNode.SetName("InstructionModel")
