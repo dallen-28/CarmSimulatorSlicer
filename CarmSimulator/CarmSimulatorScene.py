@@ -37,12 +37,6 @@ class CarmSimulatorScene:
             self.cModel.GetDisplayNode().SetColor(0.91, 0.91, 0.91)
         self.cModel.SetSelectable(False)
 
-        try:
-            self.coordinateModel = slicer.util.getNode("CoordinateModel")
-        except:
-            self.coordinateModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/CoordinateModel.stl'))
-            self.coordinateModel.GetDisplayNode().SetColor(1,0,0)
-        self.coordinateModel.SetSelectable(False)
 
         try:
             self.gantryModel = slicer.util.getNode("GantryV3")
@@ -181,7 +175,7 @@ class CarmSimulatorScene:
             self.lumbarSpineVolume.GetNthDisplayNode(1).SetAndObserveVolumePropertyNodeID(volumeProp.GetID())
             self.lumbarSpineVolume.SetDisplayVisibility(1)
 
-        self.CreatePlaneModel(678,1920)
+        self.CreatePlaneModel(678,2550)
         #self.CreatePlaneModel(200,1000)
 
     def loadScoliosisCT(self):
