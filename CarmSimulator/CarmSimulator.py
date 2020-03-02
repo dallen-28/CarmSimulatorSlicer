@@ -79,10 +79,48 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         #print("Action") # 2.0 for pressed 3.0 for released
         #print(action)
 
+        if input == 4:
+            if action == 3:
+                self.logic.CollectImage(True)
+            return
 
         # Do Nothing unless we receive a release event from the trigger
-        if input == 0 and action == 3:
+        if input == 0:
+            if action == 3:
                self.onShootFluoroButtonClicked(True)
+            return
+        if trackpadPositionX == 0:
+            self.direction = 0
+            return
+
+        # Set C-arm Movement Direction
+        if device == 1:
+            if trackpadPositionX > 0:
+                if trackpadPositionY > 0:
+                    self.direction = 1
+                else:
+                    self.direction = 2
+            else:
+                if trackpadPositionY > 0:
+                    self.direction = 3
+                else:
+                    self.direction = 4
+        elif device == 2:
+            if trackpadPositionX > 0:
+                if trackpadPositionY > 0:
+                    self.direction = 5
+                else:
+                    self.direction = 6
+            else:
+                if trackpadPositionY > 0:
+                    self.direction = 7
+                else:
+                    self.direction = 8
+
+
+        # Do Nothing unless we receive a release event from the trigger
+        #if input == 0 and action == 3:
+        #       self.onShootFluoroButtonClicked(True)
 
 
 
@@ -520,8 +558,10 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         #self.texture = vtk.vtkTexture()
         #self.texture.SetInputConnection(self.winToImage.GetOutputPort())
         #self.texture.Update()
-        self.plane.SetPoint1(0, 530, 0)
-        self.plane.SetPoint2(335, 0, 0)
+        #self.plane.SetPoint1(0, 530, 0)
+        self.plane.SetPoint1(0, 1060, 0)
+        #self.plane.SetPoint2(335, 0, 0)
+        self.plane.SetPoint2(675, 0, 0)
         self.plane.SetOrigin(0, 0, 0)
         self.plane.Update()
 
@@ -608,7 +648,9 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def UpdateGantryRotation(self, value):
         self.xRotationValue = value
         self.gantryRotation.Identity()
+        self.gantryRotation.Translate(0,337.5527,0)
         self.gantryRotation.RotateX(value)
+        self.gantryRotation.Translate(0,-337.5527,0)
         self.scene.gantryTransform.SetMatrixTransformToParent(self.gantryRotation.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()

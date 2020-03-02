@@ -37,6 +37,14 @@ class CarmSimulatorScene:
             self.cModel.GetDisplayNode().SetColor(0.91, 0.91, 0.91)
         self.cModel.SetSelectable(False)
 
+        try:
+            self.coneModel = slicer.util.getNode("Cone")
+        except:
+            self.coneModel = slicer.util.loadModel(os.path.join(self.resourcePath, 'Resources/Cone.stl'))
+            self.coneModel.GetDisplayNode().SetColor(1,0,0)
+            self.coneModel.GetDisplayNode().SetOpacity(0.5)
+        self.coneModel.SetSelectable(False)
+
 
         try:
             self.gantryModel = slicer.util.getNode("GantryV3")
@@ -88,6 +96,13 @@ class CarmSimulatorScene:
         except:
             self.cTransform = slicer.util.loadTransform(
                 os.path.join(self.resourcePath, 'Resources/CTransform.h5'))
+
+
+        try:
+            self.coneTransform = slicer.util.getNode("ConeTransform")
+        except:
+            self.coneTransform = slicer.util.loadTransform(
+                os.path.join(self.resourcePath, 'Resources/ConeTransform.h5'))
 
         try:
             self.gantryTransform = slicer.util.getNode("GantryTransform")
@@ -144,6 +159,8 @@ class CarmSimulatorScene:
 
         # Set up transform hierarchy
         self.cTransform.SetAndObserveTransformNodeID(self.gantryTransform.GetID())
+        self.coneModel.SetAndObserveTransformNodeID(self.coneTransform.GetID())
+        self.coneTransform.SetAndObserveTransformNodeID(self.cTransform.GetID())
         self.tableTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
         self.surfaceMeshTransform.SetAndObserveTransformNodeID(self.tableZTranslation.GetID())
         self.fluoroDisplayTransform.SetAndObserveTransformNodeID(self.sceneTransform.GetID())
