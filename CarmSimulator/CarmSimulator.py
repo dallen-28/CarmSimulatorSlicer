@@ -211,7 +211,7 @@ class CarmSimulatorWidget(ScriptedLoadableModuleWidget):
         self.xRotationSliderWidget = ctk.ctkSliderWidget()
         self.xRotationSliderWidget.singleStep = 0.01
         self.xRotationSliderWidget.minimum = -15
-        self.xRotationSliderWidget.maximum = 100
+        self.xRotationSliderWidget.maximum = 115
         self.xRotationSliderWidget.value = 0.0
         self.xRotationSliderWidget.setToolTip("C Rotation about the Z axis.")
         self.xRotationSliderWidget.connect('valueChanged(double)', self.onCRotationValuesChanged)
@@ -590,9 +590,9 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
         self.cameraTransform.Identity()
         self.cameraTransform.PostMultiply()
         #self.cameraTransform.Translate(0, -250 + self.zoomFactor * 4, 0)
-        self.cameraTransform.Translate(0, 705.81 - self.zoomFactor * 16, 0)
-        self.cameraTransform.RotateZ(self.zRotationValue)
-        self.cameraTransform.RotateX(-self.xRotationValue)
+        self.cameraTransform.Translate(0, -705.81 + self.zoomFactor * 16, 0)
+        self.cameraTransform.RotateZ(-self.zRotationValue)
+        self.cameraTransform.RotateX(self.xRotationValue)
 
         #self.cameraTransform.Translate(500.2704, 0, 0)
         #self.cameraTransform.Translate(-1262.2704, -337.5527, 5.7)
@@ -668,7 +668,7 @@ class CarmSimulatorLogic(ScriptedLoadableModuleLogic):
     def UpdateTable(self, value):
         self.tableTranslationValue = value
         self.tableTranslationTransform.Identity()
-        self.tableTranslationTransform.Translate(0,4*self.tableTranslationValue,0)
+        self.tableTranslationTransform.Translate(0,self.tableTranslationValue,0)
         self.scene.tableZTranslation.SetMatrixTransformToParent(self.tableTranslationTransform.GetMatrix())
         if self.toggleDRR == True:
             self.UpdateDRR()
